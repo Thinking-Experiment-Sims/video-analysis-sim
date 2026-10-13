@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Analysis &amp; Motion Tracking - The Thinking Experiment</title>
+  <meta name="description" content="Free, modern in-browser video analysis tool replicating Logger Pro with sub-pixel loupe tracking, scale calibration, and synchronized kinematic plots.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Chart.js for high-performance interactive kinematic plotting -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-group">
+      <span class="brand-badge">PhysicsKit</span>
+      <h1 class="brand-title">MotionTracker <span class="brand-subtitle">Modern Video Analysis</span></h1>
+    </div>
+    <div class="header-actions">
+      <button id="btnSampleSelect" class="btn" title="Choose a pre-recorded physics experiment">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        Sample Videos
+      </button>
+      <label for="videoFileInput" class="btn btn-primary" title="Open any video file from your computer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        Open Video
+      </label>
+      <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/quicktime" style="display:none;">
+      <button id="btnExportCSV" class="btn btn-amber" title="Export tracked data to CSV">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Export CSV
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-container">
+    <!-- Left Column: Video Workspace & Controls -->
+    <section class="card" aria-label="Video Analysis Workspace">
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="tool-group">
+          <button id="toolTrack" class="btn btn-amber active" title="Click on the moving object to add tracking points">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            Add Points
+          </button>
+          <button id="toolScale" class="btn" title="Drag a line across a known length to calibrate scale (e.g., 1 meter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20M2 8v8M22 8v8M12 9v6"></path></svg>
+            Set Scale
+          </button>
+          <button id="toolOrigin" class="btn" title="Place or drag the coordinate origin (0, 0)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg>
+            Set Origin
+          </button>
+        </div>
+
+        <div class="tool-group">
+          <label style="font-size: 0.8rem; color: var(--muted); font-weight: 500;">Series:</label>
+          <select id="seriesSelect" class="input-control">
+            <option value="A">Point A (Amber)</option>
+            <option value="B">Point B (Teal)</option>
+          </select>
+          <button id="btnClearSeries" class="btn btn-icon-only" title="Clear current series points">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+
+        <div class="tool-group">
+          <label style="font-size: 0.8rem; color: var(--muted); font-weight: 500;">Step:</label>
+          <select id="stepFrameSelect" class="input-control" title="Frames to advance after each click">
+            <option value="1">1 Frame</option>
+            <option value="2" selected>2 Frames</option>
+            <option value="3">3 Frames</option>
+            <option value="5">5 Frames</option>
+          </select>
+          <label style="font-size: 0.8rem; color: var(--muted); font-weight: 500; margin-left: 0.4rem;">FPS:</label>
+          <input type="number" id="fpsInput" class="input-control" style="width: 58px;" value="30" min="1" max="480" title="Frames per second">
+        </div>
+
+        <div class="tool-group" style="margin-left: auto;">
+          <label style="font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+            <input type="checkbox" id="chkShowVectors" checked> Show Vectors
+          </label>
+          <label style="font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 0.35rem; cursor: pointer; margin-left: 0.5rem;">
+            <input type="checkbox" id="chkShowLoupe" checked> Magnifier
+          </label>
+        </div>
+      </div>
+
+      <!-- Video Canvas Stage -->
+      <div class="video-workspace">
+        <div class="viewport-container" id="viewportContainer">
+          <video id="mainVideo" playsinline preload="auto"></video>
+          <canvas id="overlayCanvas"></canvas>
+          <canvas id="loupeCanvas" width="120" height="120"></canvas>
+        </div>
+
+        <!-- Initial Drag & Drop Overlay -->
+        <div id="dropzoneOverlay" class="dropzone-overlay">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary-teal)" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+          <h2 class="dropzone-title">Drop a Physics Video Here to Analyze</h2>
+          <p style="color: var(--muted); max-width: 420px; font-size: 0.9rem;">Supports MP4, MOV, and WebM videos. All tracking is computed entirely on your device with 100% privacy.</p>
+          <div style="margin-top: 0.5rem;">
+            <p style="font-size: 0.8rem; font-weight: 600; color: var(--subtle); text-transform: uppercase; margin-bottom: 0.5rem;">Or explore built-in standard physics experiments:</p>
+            <div class="preset-pills">
+              <button class="pill-btn" data-preset="projectile">⚽ 2D Projectile Motion</button>
+              <button class="pill-btn" data-preset="freefall">🏀 Free Fall (g = 9.8 m/s²)</button>
+              <button class="pill-btn" data-preset="pendulum">⏱️ Simple Harmonic Pendulum</button>
+              <button class="pill-btn" data-preset="cart">🛒 Elastic Cart Collision</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Video Transport Bar -->
+      <div class="transport-bar">
+        <button id="btnPrevFrame" class="btn btn-icon-only" title="Previous Frame (Left Arrow)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+        </button>
+        <button id="btnPlayPause" class="btn btn-icon-only btn-primary" title="Play / Pause (Spacebar)">
+          <svg id="iconPlay" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <svg id="iconPause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+        </button>
+        <button id="btnNextFrame" class="btn btn-icon-only" title="Next Frame (Right Arrow)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+        </button>
+
+        <input type="range" id="timeScrubber" class="scrub-slider" min="0" max="100" step="0.01" value="0">
+
+        <div class="time-display">
+          <span id="currentTimeText">t = 0.000 s</span> | <span id="currentFrameText">Frame: 0</span>
+        </div>
+
+        <select id="playbackRateSelect" class="input-control" style="width: 72px;" title="Playback Speed">
+          <option value="0.25">0.25×</option>
+          <option value="0.5" selected>0.50×</option>
+          <option value="1">1.00×</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Right Column: Kinematics Analysis, Graphs & Data Tables -->
+    <aside class="card" aria-label="Kinematic Data and Plots">
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="tab-graphs">Graphs &amp; Fits</button>
+        <button class="tab-btn" data-tab="tab-table">Data Table</button>
+        <button class="tab-btn" data-tab="tab-calibration">Scale &amp; Axes</button>
+      </nav>
+
+      <div class="card-body">
+        <!-- Graphs Tab -->
+        <div id="tab-graphs" class="tab-content active">
+          <!-- Graph 1: Position vs Time -->
+          <div class="graph-card">
+            <div class="graph-header">
+              <span class="graph-title">Position vs. Time (y &amp; x vs. t)</span>
+              <div class="tool-group" style="border: none; padding: 0; margin: 0;">
+                <button id="btnFitPosition" class="btn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Curve Fit</button>
+                <span id="fitResultPos" class="fit-readout" style="display: none;"></span>
+              </div>
+            </div>
+            <div class="chart-canvas-container">
+              <canvas id="posChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Graph 2: Velocity vs Time -->
+          <div class="graph-card">
+            <div class="graph-header">
+              <span class="graph-title">Velocity vs. Time (v<sub>y</sub> &amp; v<sub>x</sub> vs. t)</span>
+              <div class="tool-group" style="border: none; padding: 0; margin: 0;">
+                <button id="btnFitVelocity" class="btn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Linear Fit</button>
+                <span id="fitResultVel" class="fit-readout" style="display: none;"></span>
+              </div>
+            </div>
+            <div class="chart-canvas-container">
+              <canvas id="velChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Table Tab -->
+        <div id="tab-table" class="tab-content">
+          <div class="info-banner">
+            <span>Points tracked on video automatically populate this table. Click any row to jump the video to that exact frame.</span>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table" id="pointsTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>t (s)</th>
+                  <th>x (m)</th>
+                  <th>y (m)</th>
+                  <th>v<sub>x</sub> (m/s)</th>
+                  <th>v<sub>y</sub> (m/s)</th>
+                </tr>
+              </thead>
+              <tbody id="pointsTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--subtle); padding: 2rem;">No tracking points yet. Click on the video to record points.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Scale & Calibration Tab -->
+        <div id="tab-calibration" class="tab-content">
+          <div class="info-banner">
+            <strong>Calibration Settings:</strong>
+            Set known object lengths and configure your coordinate axes.
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 600; color: var(--ink);">Scale Stick Length (meters):</label>
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+                <input type="number" id="scaleLengthInput" class="input-control" value="1.0" step="0.01" min="0.001" style="flex: 1;">
+                <button id="btnApplyScale" class="btn btn-amber">Calibrate</button>
+              </div>
+              <p id="scaleReadout" style="font-size: 0.78rem; color: var(--muted); margin-top: 0.35rem;">Current Scale: 1 px = 0.0050 m (200.0 px/m)</p>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-light);">
+
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 600; color: var(--ink);">Coordinate Origin &amp; Angle:</label>
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+                <input type="number" id="originAngleInput" class="input-control" value="0.0" step="0.5" style="width: 80px;" placeholder="deg">
+                <span style="font-size: 0.8rem; color: var(--muted); align-self: center;">degrees rotation</span>
+                <button id="btnResetOrigin" class="btn" style="margin-left: auto;">Center Origin</button>
+              </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-light);">
+
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 600; color: var(--ink);">Kinematic Differentiation:</label>
+              <p style="font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem;">
+                Calculated using 3-point central finite differences:
+                <br>
+                <code>v<sub>i</sub> = (x<sub>i+1</sub> - x<sub>i-1</sub>) / (t<sub>i+1</sub> - t<sub>i-1</sub>)</code>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Status Bar Footer -->
+  <footer class="status-bar">
+    <div>Status: <span id="statusMessage" style="font-weight: 500; color: var(--ink);">Ready. Select a sample video or open your own video file to begin.</span></div>
+    <div>PhysicsKit • The Thinking Experiment</div>
+  </footer>
+
+  <!-- Simulation Application Logic -->
+  <script src="simulation.js"></script>
+</body>
+</html>
