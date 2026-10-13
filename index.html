@@ -9,6 +9,10 @@
   <link rel="stylesheet" href="styles.css">
   <!-- Chart.js for high-performance interactive kinematic plotting -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- KaTeX for beautiful math and physics formula rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}, {left: '$', right: '$', display: false}]});"></script>
 </head>
 <body>
   <!-- Header -->
@@ -229,41 +233,40 @@
           <div class="pedagogy-card">
             <h4>💡 Why Linearize Parabolic Motion?</h4>
             <p>
-              In physics, fitting a parabola $y(t) = \frac{1}{2}at^2 + v_0t + y_0$ contains three dependent parameters $(a, v_0, y_0)$. Simply graphing $y$ versus $t^2$ <strong>does not produce a straight line</strong> unless the initial velocity $v_0 = 0$.
+              In physics, fitting a parabola \(y(t) = \frac{1}{2}at^2 + v_0t + y_0\) contains three dependent parameters \((a, v_0, y_0)\). Simply graphing \(y\) versus \(t^2\) <strong>does not produce a straight line</strong> unless the initial velocity \(v_0 = 0\).
             </p>
-            <div class="formula-box">
-              General Kinematics: y(t) = ½at² + v₀t + y₀
+            <div class="formula-box" style="text-align: center; font-size: 1rem;">
+              \[y(t) = \frac{1}{2}at^2 + v_0t + y_0\]
             </div>
           </div>
 
           <div class="pedagogy-card">
             <h4>🎯 The Discovery Method: Avoiding Dependence on v₀</h4>
             <p>
-              How can students isolate acceleration $a$ without needing $v_0 = 0$ at the release point?
+              How can students isolate acceleration \(a\) without needing \(v_0 = 0\) at the release point?
             </p>
             <p>
               <strong>Look at the apex (peak) of the position-time curve!</strong>
-              At the apex $(t_{\text{apex}}, y_{\text{apex}})$, the instantaneous vertical velocity is exactly zero:
+              At the apex \((t_{\text{apex}}, y_{\text{apex}})\), the instantaneous vertical velocity is exactly zero:
               <br>
-              <code>v_y(t_apex) = 0</code>
+              \[v_y(t_{\text{apex}}) = 0\]
             </p>
             <div class="formula-box">
-              Shifted Vertex Form:
-              <br>
-              [y - y_apex] = ½a · (t - t_apex)²
-              <br><br>
-              Let Y' = (y - y_apex) and X' = (t - t_apex)²:
-              <br>
-              → Y' = Slope · X'  where Slope = ½a
+              <div style="font-weight: 600; margin-bottom: 0.35rem; color: var(--primary-teal);">Shifted Vertex Form:</div>
+              \[[y - y_{\text{apex}}] = \frac{1}{2}a(t - t_{\text{apex}})^2\]
+              <div style="margin-top: 0.5rem;">
+                Let \(Y' = [y - y_{\text{apex}}]\) and \(X' = (t - t_{\text{apex}})^2\):
+                \[Y' = (\text{Slope}) \cdot X' \quad \text{where} \quad \text{Slope} = \frac{1}{2}a \implies a = 2 \cdot (\text{Slope})\]
+              </div>
             </div>
-            <p style="font-size: 0.8rem; color: var(--primary-teal); font-weight: 600;">
-              Clicking "Linearize: y vs (t-t_apex)²" on the Graphs tab automatically detects the apex of your tracked points and plots this linearized model! The slope equals ½a (or -4.9 m/s² for free fall), yielding acceleration directly.
+            <p style="font-size: 0.85rem; color: var(--primary-teal); font-weight: 600; margin-top: 0.4rem;">
+              Clicking <strong>"Linearize: y vs (t-t_apex)²"</strong> on the Graphs tab automatically detects the apex of your tracked points and plots this linearized model! The slope equals \(\frac{1}{2}a\) (or \(-4.9\text{ m/s}^2\) for free fall), yielding acceleration directly.
             </p>
           </div>
 
           <div class="info-banner">
             <strong>About Vectors:</strong>
-            The "Vectors" toggle draws arrows scaled to instantaneous velocity $(\vec{v} = v_x\hat{i} + v_y\hat{j})$. In projectile motion, note how the horizontal arrow remains constant while the vertical arrow shrinks to zero at the apex and points downward on descent!
+            The "Vectors" toggle draws arrows scaled to instantaneous velocity \(\vec{v} = v_x\hat{i} + v_y\hat{j}\). In projectile motion, note how the horizontal arrow remains constant while the vertical arrow shrinks to zero at the apex and points downward on descent!
           </div>
         </div>
 
@@ -326,7 +329,7 @@
             <div>
               <label style="font-size: 0.82rem; font-weight: 600; color: var(--ink);">Vector Visualization Explained:</label>
               <p style="font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem;">
-                When <strong>Show Vectors</strong> is checked, green/amber arrows originate from each tracked point. The length and direction of each arrow represent the magnitude and direction of the instantaneous velocity vector $\vec{v}$.
+                When <strong>Show Vectors</strong> is checked, arrows originate from each tracked point. The length and direction of each arrow represent the magnitude and direction of the instantaneous velocity vector \(\vec{v} = v_x\hat{i} + v_y\hat{j}\).
               </p>
             </div>
           </div>
