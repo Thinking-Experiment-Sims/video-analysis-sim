@@ -108,16 +108,16 @@ body {
 /* Layout */
 .app-container {
   display: grid;
-  grid-template-columns: 1fr 480px;
+  grid-template-columns: 1fr 540px;
   gap: 1.25rem;
   padding: 1.25rem;
   flex: 1;
-  max-width: 1800px;
+  max-width: 1850px;
   margin: 0 auto;
   width: 100%;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
   .app-container {
     grid-template-columns: 1fr;
   }
@@ -156,6 +156,9 @@ body {
 .card-body {
   padding: 1rem;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 /* Toolbar */
@@ -167,6 +170,17 @@ body {
   padding: 0.65rem 1rem;
   background: #ffffff;
   border-bottom: 1px solid var(--border-light);
+}
+
+.secondary-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
 }
 
 .tool-group {
@@ -260,7 +274,7 @@ body {
 .viewport-container {
   position: relative;
   max-width: 100%;
-  max-height: 600px;
+  max-height: 560px;
   display: inline-block;
   box-shadow: var(--shadow-md);
   background: #000;
@@ -271,7 +285,7 @@ body {
 #mainVideo {
   display: block;
   max-width: 100%;
-  max-height: 600px;
+  max-height: 560px;
   width: auto;
   height: auto;
 }
@@ -285,19 +299,15 @@ body {
   cursor: crosshair;
 }
 
-/* Loupe / Magnifier */
-#loupeCanvas {
+/* Floating Placement Reticle / Circle Preview */
+#reticlePreview {
   position: absolute;
   pointer-events: none;
-  width: 120px;
-  height: 120px;
+  border: 1.5px dashed var(--accent-amber);
   border-radius: 50%;
-  border: 3px solid var(--accent-amber);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.3);
-  background: #fff;
+  transform: translate(-50%, -50%);
   display: none;
-  z-index: 50;
-  transform: translate(-50%, -120%);
+  z-index: 30;
 }
 
 /* Scrubbing / Transport controls */
@@ -384,7 +394,7 @@ body {
 
 /* Data Table */
 .table-wrapper {
-  max-height: 400px;
+  max-height: 420px;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -435,7 +445,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0.75rem;
-  height: 280px;
+  height: 310px;
   display: flex;
   flex-direction: column;
 }
@@ -445,10 +455,12 @@ body {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .graph-title {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--primary-teal);
 }
@@ -458,9 +470,10 @@ body {
   font-size: 0.78rem;
   color: var(--accent-amber-dark);
   background: var(--accent-amber-light);
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.6rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--accent-amber-border);
+  display: inline-block;
 }
 
 .chart-canvas-container {
@@ -469,7 +482,44 @@ body {
   width: 100%;
 }
 
-/* Instruction modal / Help overlay */
+/* Linearization & Educational Callouts */
+.pedagogy-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent-amber);
+  border-radius: var(--radius-sm);
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pedagogy-card h4 {
+  font-size: 0.9rem;
+  color: var(--ink);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pedagogy-card p {
+  font-size: 0.83rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.formula-box {
+  background: var(--surface-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+
+/* Info banner */
 .info-banner {
   background: var(--primary-teal-light);
   border: 1px solid var(--primary-teal-border);

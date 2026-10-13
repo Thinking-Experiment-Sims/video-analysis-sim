@@ -8,23 +8,38 @@
 const state = {
   activeTool: 'track', // 'track', 'scale', 'origin'
   activeSeries: 'A',   // 'A' or 'B'
-  fps: 30,
+  fps: 60,
   stepFrames: 2,
   currentTime: 0,
   duration: 0,
   isPlaying: false,
+
+  // Visibility toggles
+  showPoints: true,
   showVectors: true,
-  showLoupe: true,
+  showScale: true,
+  showOrigin: true,
+
+  // Marker options
+  markerType: 'circle', // 'circle' (reticle) or 'point'
+  markerRadius: 14,     // in pixels
+
+  // Motion component filter & linearization
+  motionFilter: 'both', // 'both', 'vertical', 'horizontal'
+  isLinearized: false,
+
+  // Time offset (for setting t0 at first tracked point)
+  timeOffset: 0,
 
   // Calibration & Transform
-  pixelsPerMeter: 300, // 300px = 1m default
-  origin: { x: 80, y: 380 }, // in video coordinate space
+  pixelsPerMeter: 140, // default
+  origin: { x: 80, y: 410 },
   originAngle: 0, // in radians
 
   // Scale stick state
   scaleStick: {
-    start: { x: 100, y: 400 },
-    end: { x: 400, y: 400 },
+    start: { x: 80, y: 430 },
+    end: { x: 220, y: 430 },
     lengthMeters: 1.0,
     isDragging: false,
     dragPoint: null
@@ -32,11 +47,11 @@ const state = {
 
   // Tracked data points
   series: {
-    A: [], // Array of { frame, time, videoX, videoY, x, y, vx, vy, ax, ay }
+    A: [], // Array of { frame, rawTime, time, videoX, videoY, x, y, vx, vy, ax, ay }
     B: []
   },
 
-  // Synthetic Video Generator (for built-in experiments)
+  // Synthetic Video Generator
   isSynthetic: true,
   syntheticType: 'projectile',
   syntheticCanvas: document.createElement('canvas'),
@@ -47,8 +62,7 @@ const state = {
 const video = document.getElementById('mainVideo');
 const overlayCanvas = document.getElementById('overlayCanvas');
 const ctx = overlayCanvas.getContext('2d');
-const loupeCanvas = document.getElementById('loupeCanvas');
-const loupeCtx = loupeCanvas.getContext('2d');
+const reticlePreview = document.getElementById('reticlePreview');
 const viewportContainer = document.getElementById('viewportContainer');
 const dropzoneOverlay = document.getElementById('dropzoneOverlay');
 
@@ -66,9 +80,22 @@ const fpsInput = document.getElementById('fpsInput');
 const stepFrameSelect = document.getElementById('stepFrameSelect');
 const seriesSelect = document.getElementById('seriesSelect');
 const btnClearSeries = document.getElementById('btnClearSeries');
-const chkShowVectors = document.getElementById('chkShowVectors');
-const chkShowLoupe = document.getElementById('chkShowLoupe');
+const btnSetTZero = document.getElementById('btnSetTZero');
 const statusMessage = document.getElementById('statusMessage');
+
+// Visibility & Marker Controls
+const chkShowPoints = document.getElementById('chkShowPoints');
+const chkShowVectors = document.getElementById('chkShowVectors');
+const chkShowScale = document.getElementById('chkShowScale');
+const chkShowOrigin = document.getElementById('chkShowOrigin');
+const markerTypeSelect = document.getElementById('markerTypeSelect');
+const markerSizeSelect = document.getElementById('markerSizeSelect');
+
+// Graph / Filter Controls
+const motionComponentSelect = document.getElementById('motionComponentSelect');
+const btnToggleLinearize = document.getElementById('btnToggleLinearize');
+const posChartTitle = document.getElementById('posChartTitle');
+const velChartTitle = document.getElementById('velChartTitle');
 
 // Tools
 const toolTrack = document.getElementById('toolTrack');
@@ -83,11 +110,14 @@ const videoFileInput = document.getElementById('videoFileInput');
 const btnExportCSV = document.getElementById('btnExportCSV');
 const btnSampleSelect = document.getElementById('btnSampleSelect');
 
-// Tabs
+// Tabs & Tables
 const tabButtons = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
 const pointsTableBody = document.getElementById('pointsTableBody');
-const btnFitPosition = document.getElementById('btnFitPosition');
+
+// Fits
+const btnFitQuadPos = document.getElementById('btnFitQuadPos');
+const btnFitLinPos = document.getElementById('btnFitLinPos');
 const btnFitVelocity = document.getElementById('btnFitVelocity');
 const fitResultPos = document.getElementById('fitResultPos');
 const fitResultVel = document.getElementById('fitResultVel');
@@ -104,6 +134,7 @@ function initSyntheticExperiment(type = 'projectile') {
   state.syntheticType = type;
   state.duration = 2.5; // 2.5 seconds
   state.currentTime = 0;
+  state.timeOffset = 0;
   state.fps = 60;
   fpsInput.value = state.fps;
 
@@ -113,7 +144,6 @@ function initSyntheticExperiment(type = 'projectile') {
   state.syntheticCanvas.height = h;
   state.syntheticCtx = state.syntheticCanvas.getContext('2d');
 
-  // Set default origin and scale for physics
   if (type === 'projectile') {
     state.origin = { x: 80, y: 410 };
     state.pixelsPerMeter = 140; // 140px = 1m
@@ -124,7 +154,7 @@ function initSyntheticExperiment(type = 'projectile') {
       isDragging: false,
       dragPoint: null
     };
-    updateStatus('Loaded Projectile Toss experiment (v0 = 4.2 m/s, θ = 58°). Click object to track motion!');
+    updateStatus('Loaded Projectile Motion. Click object to place tracking reticle circles!');
   } else if (type === 'freefall') {
     state.origin = { x: 360, y: 60 };
     state.pixelsPerMeter = 180;
@@ -135,20 +165,19 @@ function initSyntheticExperiment(type = 'projectile') {
       isDragging: false,
       dragPoint: null
     };
-    updateStatus('Loaded Free Fall Lab (g = 9.8 m/s²). Drop height = 2.0 m. Click basketball to track!');
+    updateStatus('Loaded Free Fall Lab (g = 9.8 m/s²). Drop height = 2.0 m.');
   } else if (type === 'pendulum') {
     state.origin = { x: 360, y: 100 };
     state.pixelsPerMeter = 200;
-    updateStatus('Loaded Simple Pendulum (L = 1.2 m). Click bob across complete oscillation cycles.');
+    updateStatus('Loaded Simple Pendulum (L = 1.2 m). Click bob to track oscillation.');
   } else if (type === 'cart') {
     state.origin = { x: 50, y: 320 };
     state.pixelsPerMeter = 250;
-    updateStatus('Loaded Elastic Cart Collision on Track. Track Cart A (Amber) then Cart B (Teal).');
+    updateStatus('Loaded Elastic Cart Collision on Track.');
   }
 
   updateScaleReadout();
 
-  // Create stream for HTML video element
   try {
     const stream = state.syntheticCanvas.captureStream(state.fps);
     video.srcObject = stream;
@@ -159,7 +188,6 @@ function initSyntheticExperiment(type = 'projectile') {
     });
   } catch (err) {
     console.warn('Canvas stream fallback:', err);
-    // Fallback: draw directly to overlay
     renderSyntheticFrame(0);
     resizeCanvas();
   }
@@ -173,14 +201,14 @@ function renderSyntheticFrame(t) {
   const w = state.syntheticCanvas.width;
   const h = state.syntheticCanvas.height;
 
-  // Background: Clean lab setting (Light mode, white/subtle gray)
+  // Background: Clean lab setting
   ctxS.fillStyle = '#f8fafc';
   ctxS.fillRect(0, 0, w, h);
 
   // Lab Wall & Measurement Grid
   ctxS.strokeStyle = '#e2e8f0';
   ctxS.lineWidth = 1;
-  const gridStep = state.pixelsPerMeter / 2; // 0.5m grid
+  const gridStep = state.pixelsPerMeter / 2;
   for (let x = 0; x < w; x += gridStep) {
     ctxS.beginPath();
     ctxS.moveTo(x, 0);
@@ -204,13 +232,13 @@ function renderSyntheticFrame(t) {
   ctxS.lineTo(w, 420);
   ctxS.stroke();
 
-  // Lab Meter Stick on Wall (Visible reference)
+  // Lab Meter Stick on Wall
   ctxS.fillStyle = '#ffecb3';
   ctxS.strokeStyle = '#d67b19';
   ctxS.lineWidth = 1.5;
   const stickX = 80;
   const stickY = 435;
-  const stickW = state.pixelsPerMeter; // exactly 1.0m
+  const stickW = state.pixelsPerMeter;
   ctxS.fillRect(stickX, stickY, stickW, 14);
   ctxS.strokeRect(stickX, stickY, stickW, 14);
   ctxS.fillStyle = '#123140';
@@ -219,7 +247,6 @@ function renderSyntheticFrame(t) {
 
   // Render Experiments
   if (state.syntheticType === 'projectile') {
-    // Projectile Launch: v0 = 4.2 m/s, theta = 58 deg, g = 9.8 m/s^2
     const theta = 58 * (Math.PI / 180);
     const v0 = 4.2;
     const g = 9.8;
@@ -229,8 +256,7 @@ function renderSyntheticFrame(t) {
     const ballPixelX = state.origin.x + (xMeters * state.pixelsPerMeter);
     const ballPixelY = state.origin.y - (yMeters * state.pixelsPerMeter);
 
-    // Ball (Bright Amber with subtle 3D lighting)
-    const rad = 13;
+    const rad = 14;
     const grad = ctxS.createRadialGradient(ballPixelX - 3, ballPixelY - 3, 2, ballPixelX, ballPixelY, rad);
     grad.addColorStop(0, '#f9a825');
     grad.addColorStop(0.7, '#d67b19');
@@ -244,17 +270,7 @@ function renderSyntheticFrame(t) {
     ctxS.lineWidth = 1.5;
     ctxS.stroke();
 
-    // Center of mass crosshair
-    ctxS.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-    ctxS.beginPath();
-    ctxS.moveTo(ballPixelX - 5, ballPixelY);
-    ctxS.lineTo(ballPixelX + 5, ballPixelY);
-    ctxS.moveTo(ballPixelX, ballPixelY - 5);
-    ctxS.lineTo(ballPixelX, ballPixelY + 5);
-    ctxS.stroke();
-
   } else if (state.syntheticType === 'freefall') {
-    // Free fall: y(t) = 0.5 * g * t^2
     const g = 9.8;
     const yMeters = Math.min(2.0, 0.5 * g * t * t);
     const ballPixelX = state.origin.x;
@@ -275,16 +291,14 @@ function renderSyntheticFrame(t) {
     ctxS.stroke();
 
   } else if (state.syntheticType === 'pendulum') {
-    // Pendulum: theta(t) = theta0 * cos(omega * t)
     const L = 1.2;
     const omega = Math.sqrt(9.8 / L);
-    const theta0 = 0.45; // rad
+    const theta0 = 0.45;
     const currentTheta = theta0 * Math.cos(omega * t);
 
     const bobPixelX = state.origin.x + (L * Math.sin(currentTheta) * state.pixelsPerMeter);
     const bobPixelY = state.origin.y + (L * Math.cos(currentTheta) * state.pixelsPerMeter);
 
-    // String
     ctxS.strokeStyle = '#475569';
     ctxS.lineWidth = 2;
     ctxS.beginPath();
@@ -292,11 +306,9 @@ function renderSyntheticFrame(t) {
     ctxS.lineTo(bobPixelX, bobPixelY);
     ctxS.stroke();
 
-    // Pivot mount
     ctxS.fillStyle = '#0f7e9b';
     ctxS.fillRect(state.origin.x - 12, state.origin.y - 8, 24, 10);
 
-    // Bob
     ctxS.fillStyle = '#0f7e9b';
     ctxS.beginPath();
     ctxS.arc(bobPixelX, bobPixelY, 15, 0, Math.PI * 2);
@@ -306,29 +318,25 @@ function renderSyntheticFrame(t) {
     ctxS.stroke();
 
   } else if (state.syntheticType === 'cart') {
-    // Cart collision: Cart A moves right, collides with resting Cart B at t = 1.0s
-    let xA = 0.2;
-    let xB = 1.2;
+    let xA = 0.2, xB = 1.2;
     if (t < 1.0) {
       xA = 0.2 + 0.8 * t;
       xB = 1.0;
     } else {
       const dt = t - 1.0;
-      xA = 1.0 + 0.1 * dt; // rebound / slow
-      xB = 1.0 + 0.7 * dt; // pushed forward
+      xA = 1.0 + 0.1 * dt;
+      xB = 1.0 + 0.7 * dt;
     }
 
     const cartAY = 390;
     const cartAX = state.origin.x + (xA * state.pixelsPerMeter);
     const cartBX = state.origin.x + (xB * state.pixelsPerMeter);
 
-    // Cart A (Amber)
     ctxS.fillStyle = '#d67b19';
     ctxS.fillRect(cartAX - 30, cartAY, 60, 26);
     ctxS.strokeStyle = '#9e5207';
     ctxS.strokeRect(cartAX - 30, cartAY, 60, 26);
 
-    // Cart B (Teal)
     ctxS.fillStyle = '#0f7e9b';
     ctxS.fillRect(cartBX - 30, cartAY, 60, 26);
     ctxS.strokeStyle = '#095f76';
@@ -339,12 +347,17 @@ function renderSyntheticFrame(t) {
 // ==========================================
 // 2. Video Player & Frame Stepping
 // ==========================================
+function getAdjustedTime(rawTime) {
+  return rawTime - state.timeOffset;
+}
+
 function updateTimeAndFrame(time) {
   state.currentTime = Math.max(0, Math.min(state.duration || 10, time));
   const currentFrame = Math.round(state.currentTime * state.fps);
+  const displayT = getAdjustedTime(state.currentTime);
 
   timeScrubber.value = (state.currentTime / (state.duration || 1)) * 100;
-  currentTimeText.textContent = `t = ${state.currentTime.toFixed(3)} s`;
+  currentTimeText.textContent = `t = ${displayT.toFixed(3)} s`;
   currentFrameText.textContent = `Frame: ${currentFrame}`;
 
   if (state.isSynthetic) {
@@ -389,7 +402,7 @@ function playSyntheticLoop(now) {
 
   let newTime = state.currentTime + dt;
   if (newTime >= state.duration) {
-    newTime = 0; // Loop experiment
+    newTime = 0;
   }
   updateTimeAndFrame(newTime);
   requestAnimationFrame(playSyntheticLoop);
@@ -399,17 +412,14 @@ function playSyntheticLoop(now) {
 // 3. Coordinate System & Scale Calibration
 // ==========================================
 function transformToPhysics(videoX, videoY) {
-  // Translate relative to origin
   const dx = videoX - state.origin.x;
-  const dy = -(videoY - state.origin.y); // Invert Y (upwards is positive in physics)
+  const dy = -(videoY - state.origin.y);
 
-  // Rotate by originAngle
   const cos = Math.cos(state.originAngle);
   const sin = Math.sin(state.originAngle);
   const rx = dx * cos - dy * sin;
   const ry = dx * sin + dy * cos;
 
-  // Convert pixels to meters
   const xMeters = rx / state.pixelsPerMeter;
   const yMeters = ry / state.pixelsPerMeter;
 
@@ -444,16 +454,16 @@ function calculateScaleFromStick() {
 function addTrackPoint(videoX, videoY) {
   const currentSeries = state.series[state.activeSeries];
   const frame = Math.round(state.currentTime * state.fps);
-
-  // Check if frame already tracked; replace if so
   const existingIdx = currentSeries.findIndex(p => p.frame === frame);
   const phys = transformToPhysics(videoX, videoY);
 
   const pointData = {
     frame: frame,
-    time: state.currentTime,
+    rawTime: state.currentTime,
+    time: getAdjustedTime(state.currentTime),
     videoX: videoX,
     videoY: videoY,
+    radius: state.markerRadius,
     x: phys.x,
     y: phys.y,
     vx: 0,
@@ -466,14 +476,11 @@ function addTrackPoint(videoX, videoY) {
     currentSeries[existingIdx] = pointData;
   } else {
     currentSeries.push(pointData);
-    // Keep sorted by frame
     currentSeries.sort((a, b) => a.frame - b.frame);
   }
 
-  // Numerical differentiation across series
   recalculateKinematics();
 
-  // Auto-advance by selected step frames
   const advance = parseInt(stepFrameSelect.value, 10);
   stepFrame(advance);
 
@@ -484,13 +491,12 @@ function recalculateKinematics() {
   ['A', 'B'].forEach(sKey => {
     const pts = state.series[sKey];
     for (let i = 0; i < pts.length; i++) {
-      // Re-transform position in case origin or scale changed
+      pts[i].time = getAdjustedTime(pts[i].rawTime);
       const phys = transformToPhysics(pts[i].videoX, pts[i].videoY);
       pts[i].x = phys.x;
       pts[i].y = phys.y;
 
-      // Centered finite differences for velocity:
-      // vi = (x_{i+1} - x_{i-1}) / (t_{i+1} - t_{i-1})
+      // 3-point centered finite difference
       if (i > 0 && i < pts.length - 1) {
         const dt = pts[i + 1].time - pts[i - 1].time;
         if (dt > 0.0001) {
@@ -498,12 +504,10 @@ function recalculateKinematics() {
           pts[i].vy = (pts[i + 1].y - pts[i - 1].y) / dt;
         }
       } else if (i === 0 && pts.length > 1) {
-        // Forward difference at start
         const dt = pts[1].time - pts[0].time;
         pts[0].vx = dt > 0 ? (pts[1].x - pts[0].x) / dt : 0;
         pts[0].vy = dt > 0 ? (pts[1].y - pts[0].y) / dt : 0;
       } else if (i === pts.length - 1 && pts.length > 1) {
-        // Backward difference at end
         const dt = pts[i].time - pts[i - 1].time;
         pts[i].vx = dt > 0 ? (pts[i].x - pts[i - 1].x) / dt : 0;
         pts[i].vy = dt > 0 ? (pts[i].y - pts[i - 1].y) / dt : 0;
@@ -515,8 +519,20 @@ function recalculateKinematics() {
   updateCharts();
 }
 
+function setInitialTimeAtFirstPoint() {
+  const pts = state.series[state.activeSeries];
+  if (pts.length === 0) {
+    alert('No points tracked yet. Track at least one point first.');
+    return;
+  }
+  state.timeOffset = pts[0].rawTime;
+  recalculateKinematics();
+  updateTimeAndFrame(state.currentTime);
+  updateStatus(`Shifted time axis so first point is t₀ = 0.000 s.`);
+}
+
 // ==========================================
-// 5. Canvas Overlay & Loupe Rendering
+// 5. Canvas Overlay & Reticle Rendering
 // ==========================================
 function resizeCanvas() {
   const rect = (state.isSynthetic) 
@@ -534,19 +550,24 @@ function resizeCanvas() {
 function drawOverlay() {
   ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
-  // If synthetic and no video stream playing, paint background frame
   if (state.isSynthetic && state.syntheticCanvas.width) {
     ctx.drawImage(state.syntheticCanvas, 0, 0, overlayCanvas.width, overlayCanvas.height);
   }
 
-  // 1. Draw Origin & Axes
-  drawAxes();
+  // Draw Origin & Axes if enabled
+  if (state.showOrigin) {
+    drawAxes();
+  }
 
-  // 2. Draw Scale Stick (if scale tool is active or calibrated)
-  drawScaleStick();
+  // Draw Scale Stick if enabled
+  if (state.showScale) {
+    drawScaleStick();
+  }
 
-  // 3. Draw Tracked Points & Velocity Vectors for all Series
-  drawTrackedPoints();
+  // Draw Tracked Points & Vectors if enabled
+  if (state.showPoints) {
+    drawTrackedPoints();
+  }
 }
 
 function drawAxes() {
@@ -565,7 +586,6 @@ function drawAxes() {
   ctx.beginPath();
   ctx.moveTo(0, 0);
   ctx.lineTo(axisLen, 0);
-  // Arrow head
   ctx.lineTo(axisLen - 8, -5);
   ctx.moveTo(axisLen, 0);
   ctx.lineTo(axisLen - 8, 5);
@@ -575,7 +595,6 @@ function drawAxes() {
   ctx.beginPath();
   ctx.moveTo(0, 0);
   ctx.lineTo(0, -axisLen);
-  // Arrow head
   ctx.lineTo(-5, -axisLen + 8);
   ctx.moveTo(0, -axisLen);
   ctx.lineTo(5, -axisLen + 8);
@@ -587,7 +606,6 @@ function drawAxes() {
   ctx.fillText('+x', axisLen + 6, 4);
   ctx.fillText('+y', -8, -axisLen - 8);
 
-  // Origin point
   ctx.fillStyle = '#0f7e9b';
   ctx.beginPath();
   ctx.arc(0, 0, 5, 0, Math.PI * 2);
@@ -605,13 +623,11 @@ function drawScaleStick() {
   ctx.strokeStyle = '#d67b19';
   ctx.lineWidth = 2.5;
 
-  // Main line
   ctx.beginPath();
   ctx.moveTo(s.start.x, s.start.y);
   ctx.lineTo(s.end.x, s.end.y);
   ctx.stroke();
 
-  // End caps
   const capLen = 10;
   const angle = Math.atan2(s.end.y - s.start.y, s.end.x - s.start.x);
   const perp = angle + Math.PI / 2;
@@ -622,7 +638,6 @@ function drawScaleStick() {
     ctx.lineTo(pt.x - Math.cos(perp) * capLen, pt.y - Math.sin(perp) * capLen);
     ctx.stroke();
 
-    // Draggable handle circle
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
@@ -630,7 +645,6 @@ function drawScaleStick() {
     ctx.stroke();
   });
 
-  // Length label
   const midX = (s.start.x + s.end.x) / 2;
   const midY = (s.start.y + s.end.y) / 2;
   ctx.fillStyle = '#d67b19';
@@ -652,79 +666,103 @@ function drawTrackedPoints() {
     for (let i = 0; i < pts.length; i++) {
       const p = pts[i];
       const isCurrent = Math.abs(p.frame - currentFrame) <= 1;
+      const r = p.radius || state.markerRadius;
 
-      // Draw point dot
-      ctx.fillStyle = isCurrent ? mainColor : softColor;
-      ctx.beginPath();
-      ctx.arc(p.videoX, p.videoY, isCurrent ? 6 : 4, 0, Math.PI * 2);
-      ctx.fill();
+      if (state.markerType === 'circle') {
+        // High accuracy target circle placed on object
+        ctx.strokeStyle = isCurrent ? mainColor : softColor;
+        ctx.lineWidth = isCurrent ? 2 : 1.5;
+        ctx.beginPath();
+        ctx.arc(p.videoX, p.videoY, r, 0, Math.PI * 2);
+        ctx.stroke();
 
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+        // Center reticle dot
+        ctx.fillStyle = mainColor;
+        ctx.beginPath();
+        ctx.arc(p.videoX, p.videoY, 3, 0, Math.PI * 2);
+        ctx.fill();
 
-      // Velocity Vector (Arrow)
+        // Center crosshair tick lines
+        ctx.beginPath();
+        ctx.moveTo(p.videoX - 5, p.videoY);
+        ctx.lineTo(p.videoX + 5, p.videoY);
+        ctx.moveTo(p.videoX, p.videoY - 5);
+        ctx.lineTo(p.videoX, p.videoY + 5);
+        ctx.stroke();
+      } else {
+        // Single point dot
+        ctx.fillStyle = isCurrent ? mainColor : softColor;
+        ctx.beginPath();
+        ctx.arc(p.videoX, p.videoY, isCurrent ? 6 : 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Velocity Vectors
       if (state.showVectors && (p.vx !== 0 || p.vy !== 0)) {
         const vScale = 30; // Pixel length per m/s
-        const vxPx = p.vx * vScale;
-        const vyPx = -p.vy * vScale; // Invert back for screen coordinates
+        let vxPx = p.vx * vScale;
+        let vyPx = -p.vy * vScale;
 
-        ctx.strokeStyle = mainColor;
+        // Apply motion filter to vectors if requested
+        if (state.motionFilter === 'vertical') vxPx = 0;
+        if (state.motionFilter === 'horizontal') vyPx = 0;
+
+        ctx.strokeStyle = isAmber ? '#d67b19' : '#0f7e9b';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(p.videoX, p.videoY);
         ctx.lineTo(p.videoX + vxPx, p.videoY + vyPx);
+        ctx.stroke();
+
+        // Arrowhead
+        const angle = Math.atan2(vyPx, vxPx);
+        const arrowLen = 7;
+        ctx.beginPath();
+        ctx.moveTo(p.videoX + vxPx, p.videoY + vyPx);
+        ctx.lineTo(
+          p.videoX + vxPx - arrowLen * Math.cos(angle - Math.PI / 6),
+          p.videoY + vyPx - arrowLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(p.videoX + vxPx, p.videoY + vyPx);
+        ctx.lineTo(
+          p.videoX + vxPx - arrowLen * Math.cos(angle + Math.PI / 6),
+          p.videoY + vyPx - arrowLen * Math.sin(angle + Math.PI / 6)
+        );
         ctx.stroke();
       }
     }
   });
 }
 
-// Loupe Magnifier Engine
-function updateLoupe(e) {
-  if (!state.showLoupe) {
-    loupeCanvas.style.display = 'none';
+// Reticle Cursor Preview
+function updateReticlePreview(e) {
+  if (state.activeTool !== 'track') {
+    reticlePreview.style.display = 'none';
     return;
   }
 
   const rect = overlayCanvas.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
 
-  if (mouseX < 0 || mouseX > overlayCanvas.width || mouseY < 0 || mouseY > overlayCanvas.height) {
-    loupeCanvas.style.display = 'none';
+  if (mx < 0 || mx > overlayCanvas.width || my < 0 || my > overlayCanvas.height) {
+    reticlePreview.style.display = 'none';
     return;
   }
 
-  loupeCanvas.style.display = 'block';
-  loupeCanvas.style.left = `${mouseX}px`;
-  loupeCanvas.style.top = `${mouseY}px`;
-
-  // Draw 2.5x zoomed view
-  loupeCtx.clearRect(0, 0, 120, 120);
-  const zoom = 2.5;
-  const srcW = 120 / zoom;
-  const srcH = 120 / zoom;
-  const srcX = mouseX - srcW / 2;
-  const srcY = mouseY - srcH / 2;
-
-  // Source image from video or synthetic canvas
-  const source = state.isSynthetic ? state.syntheticCanvas : video;
-  loupeCtx.drawImage(source, srcX, srcY, srcW, srcH, 0, 0, 120, 120);
-
-  // Loupe crosshair
-  loupeCtx.strokeStyle = '#d67b19';
-  loupeCtx.lineWidth = 1.5;
-  loupeCtx.beginPath();
-  loupeCtx.moveTo(60, 40);
-  loupeCtx.lineTo(60, 80);
-  loupeCtx.moveTo(40, 60);
-  loupeCtx.lineTo(80, 60);
-  loupeCtx.stroke();
+  const r = state.markerRadius;
+  reticlePreview.style.display = 'block';
+  reticlePreview.style.left = `${mx}px`;
+  reticlePreview.style.top = `${my}px`;
+  reticlePreview.style.width = `${r * 2}px`;
+  reticlePreview.style.height = `${r * 2}px`;
 }
 
 // ==========================================
-// 6. Interactive Charts & Curve Fitting
+// 6. Interactive Charts, Fits & Linearization
 // ==========================================
 function initCharts() {
   const chartOptions = {
@@ -740,7 +778,7 @@ function initCharts() {
     },
     scales: {
       x: {
-        title: { display: true, text: 'Time t (s)', font: { size: 10 } },
+        title: { display: true, text: 'Time t (s)', font: { size: 11, weight: 'bold' } },
         grid: { color: '#eef3f6' }
       },
       y: {
@@ -754,15 +792,16 @@ function initCharts() {
     type: 'scatter',
     data: {
       datasets: [
-        { label: 'y (m)', data: [], backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 4 },
-        { label: 'x (m)', data: [], backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 4 }
+        { label: 'y (m)', data: [], backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 4.5 },
+        { label: 'x (m)', data: [], backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 4.5 },
+        { label: 'Model Fit', data: [], type: 'line', borderColor: '#b06210', borderWidth: 2, pointRadius: 0, fill: false }
       ]
     },
     options: {
       ...chartOptions,
       scales: {
         ...chartOptions.scales,
-        y: { title: { display: true, text: 'Position (m)', font: { size: 10 } }, grid: { color: '#eef3f6' } }
+        y: { title: { display: true, text: 'Position (m)', font: { size: 11, weight: 'bold' } }, grid: { color: '#eef3f6' } }
       }
     }
   });
@@ -772,15 +811,16 @@ function initCharts() {
     type: 'scatter',
     data: {
       datasets: [
-        { label: 'vy (m/s)', data: [], backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 4 },
-        { label: 'vx (m/s)', data: [], backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 4 }
+        { label: 'vy (m/s)', data: [], backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 4.5 },
+        { label: 'vx (m/s)', data: [], backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 4.5 },
+        { label: 'Linear Fit', data: [], type: 'line', borderColor: '#b06210', borderWidth: 2, pointRadius: 0, fill: false }
       ]
     },
     options: {
       ...chartOptions,
       scales: {
         ...chartOptions.scales,
-        y: { title: { display: true, text: 'Velocity (m/s)', font: { size: 10 } }, grid: { color: '#eef3f6' } }
+        y: { title: { display: true, text: 'Velocity (m/s)', font: { size: 11, weight: 'bold' } }, grid: { color: '#eef3f6' } }
       }
     }
   });
@@ -790,16 +830,130 @@ function updateCharts() {
   const pts = state.series[state.activeSeries];
   if (!posChart || !velChart) return;
 
-  posChart.data.datasets[0].data = pts.map(p => ({ x: p.time, y: p.y }));
-  posChart.data.datasets[1].data = pts.map(p => ({ x: p.time, y: p.x }));
+  if (state.isLinearized) {
+    // Linearized view: Y' = (y - y_apex) vs X' = (t - t_apex)^2
+    renderLinearizedChart(pts);
+    return;
+  }
+
+  // Standard Position Chart
+  posChart.options.scales.x.title.text = 'Time t (s)';
+  posChart.options.scales.y.title.text = 'Position (m)';
+
+  const yData = pts.map(p => ({ x: p.time, y: p.y }));
+  const xData = pts.map(p => ({ x: p.time, y: p.x }));
+
+  if (state.motionFilter === 'vertical') {
+    posChart.data.datasets[0].data = yData;
+    posChart.data.datasets[0].hidden = false;
+    posChart.data.datasets[1].data = [];
+    posChart.data.datasets[1].hidden = true;
+    posChartTitle.textContent = 'Vertical Position vs. Time (y vs. t)';
+  } else if (state.motionFilter === 'horizontal') {
+    posChart.data.datasets[0].data = [];
+    posChart.data.datasets[0].hidden = true;
+    posChart.data.datasets[1].data = xData;
+    posChart.data.datasets[1].hidden = false;
+    posChartTitle.textContent = 'Horizontal Position vs. Time (x vs. t)';
+  } else {
+    posChart.data.datasets[0].data = yData;
+    posChart.data.datasets[0].hidden = false;
+    posChart.data.datasets[1].data = xData;
+    posChart.data.datasets[1].hidden = false;
+    posChartTitle.textContent = 'Position vs. Time (y & x vs. t)';
+  }
+
   posChart.update();
 
-  velChart.data.datasets[0].data = pts.map(p => ({ x: p.time, y: p.vy }));
-  velChart.data.datasets[1].data = pts.map(p => ({ x: p.time, y: p.vx }));
+  // Velocity Chart
+  const vyData = pts.map(p => ({ x: p.time, y: p.vy }));
+  const vxData = pts.map(p => ({ x: p.time, y: p.vx }));
+
+  if (state.motionFilter === 'vertical') {
+    velChart.data.datasets[0].data = vyData;
+    velChart.data.datasets[0].hidden = false;
+    velChart.data.datasets[1].data = [];
+    velChart.data.datasets[1].hidden = true;
+    velChartTitle.textContent = 'Vertical Velocity vs. Time (vy vs. t)';
+  } else if (state.motionFilter === 'horizontal') {
+    velChart.data.datasets[0].data = [];
+    velChart.data.datasets[0].hidden = true;
+    velChart.data.datasets[1].data = vxData;
+    velChart.data.datasets[1].hidden = false;
+    velChartTitle.textContent = 'Horizontal Velocity vs. Time (vx vs. t)';
+  } else {
+    velChart.data.datasets[0].data = vyData;
+    velChart.data.datasets[0].hidden = false;
+    velChart.data.datasets[1].data = vxData;
+    velChart.data.datasets[1].hidden = false;
+    velChartTitle.textContent = 'Velocity vs. Time (vy & vx vs. t)';
+  }
+
   velChart.update();
 }
 
-// Curve Fitting (Linear & Quadratic Regressions)
+// Parabolic Linearization using Apex Shift: Y' = y - y_apex, X' = (t - t_apex)^2
+function findApex(pts) {
+  if (pts.length < 3) return null;
+  // Use maximum y as apex point
+  let maxY = -Infinity;
+  let apexPt = pts[0];
+  pts.forEach(p => {
+    if (p.y > maxY) {
+      maxY = p.y;
+      apexPt = p;
+    }
+  });
+  return apexPt;
+}
+
+function renderLinearizedChart(pts) {
+  const apex = findApex(pts);
+  if (!apex || pts.length < 3) {
+    alert('Need at least 3 points to determine apex and linearize.');
+    state.isLinearized = false;
+    btnToggleLinearize.classList.remove('active');
+    updateCharts();
+    return;
+  }
+
+  posChartTitle.textContent = `Linearized Apex Model: (y - ${apex.y.toFixed(2)}) vs. (t - ${apex.time.toFixed(2)})²`;
+  posChart.options.scales.x.title.text = `(t - t_apex)² (s²)`;
+  posChart.options.scales.y.title.text = `[y - y_apex] (m)`;
+
+  const linPoints = pts.map(p => {
+    const dt = p.time - apex.time;
+    return {
+      x: dt * dt,
+      y: p.y - apex.y
+    };
+  });
+
+  posChart.data.datasets[0].data = linPoints;
+  posChart.data.datasets[0].label = `[y - y_apex] vs (t - t_apex)²`;
+  posChart.data.datasets[0].hidden = false;
+  posChart.data.datasets[1].data = [];
+  posChart.data.datasets[1].hidden = true;
+
+  // Fit line to linearized points: slope = 1/2 a
+  const reg = linearRegression(linPoints);
+  if (reg) {
+    const minX = Math.min(...linPoints.map(p => p.x));
+    const maxX = Math.max(...linPoints.map(p => p.x));
+    posChart.data.datasets[2].data = [
+      { x: minX, y: reg.slope * minX + reg.intercept },
+      { x: maxX, y: reg.slope * maxX + reg.intercept }
+    ];
+    posChart.data.datasets[2].label = `Fit Line: Slope = ${reg.slope.toFixed(2)} m/s²`;
+    const accel = 2 * reg.slope;
+    fitResultPos.style.display = 'inline-block';
+    fitResultPos.innerHTML = `<strong>Linearized Slope (½a):</strong> ${reg.slope.toFixed(2)} m/s² &nbsp;|&nbsp; <strong>Derived Acceleration (a = 2·slope):</strong> ${accel.toFixed(2)} m/s²`;
+  }
+
+  posChart.update();
+}
+
+// Regression Algorithms
 function linearRegression(points) {
   const n = points.length;
   if (n < 2) return null;
@@ -810,13 +964,26 @@ function linearRegression(points) {
     sumXY += p.x * p.y;
     sumXX += p.x * p.x;
   });
-  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const denom = (n * sumXX - sumX * sumX);
+  if (Math.abs(denom) < 1e-9) return null;
+
+  const slope = (n * sumXY - sumX * sumY) / denom;
   const intercept = (sumY - slope * sumX) / n;
-  return { slope, intercept };
+
+  // Calculate R²
+  const meanY = sumY / n;
+  let ssTot = 0, ssRes = 0;
+  points.forEach(p => {
+    const pred = slope * p.x + intercept;
+    ssTot += (p.y - meanY) ** 2;
+    ssRes += (p.y - pred) ** 2;
+  });
+  const r2 = ssTot > 0 ? 1 - (ssRes / ssTot) : 1;
+
+  return { slope, intercept, r2 };
 }
 
 function quadraticRegression(points) {
-  // y = A*t^2 + B*t + C  where A = 0.5 * a, so acceleration a = 2A
   const n = points.length;
   if (n < 3) return null;
 
@@ -836,7 +1003,6 @@ function quadraticRegression(points) {
     sumT2Y += t2 * y;
   });
 
-  // Solve 3x3 system using Cramer's rule
   const D = (
     n * (sumT2 * sumT4 - sumT3 * sumT3) -
     sumT * (sumT * sumT4 - sumT2 * sumT3) +
@@ -851,9 +1017,117 @@ function quadraticRegression(points) {
     sumY * (sumT * sumT3 - sumT2 * sumT2)
   );
 
+  const Db = (
+    n * (sumTY * sumT4 - sumT2Y * sumT3) -
+    sumY * (sumT * sumT4 - sumT2 * sumT3) +
+    sumT2 * (sumT * sumT2Y - sumTY * sumT2)
+  );
+
+  const Dc = (
+    sumY * (sumT2 * sumT4 - sumT3 * sumT3) -
+    sumT * (sumTY * sumT4 - sumT2Y * sumT3) +
+    sumT2 * (sumTY * sumT3 - sumT2Y * sumT2)
+  );
+
   const A = Da / D;
+  const B = Db / D;
+  const C = Dc / D;
   const accel = 2 * A;
-  return { A, accel };
+
+  return { A, B, C, accel };
+}
+
+// Perform and Display Quadratic Fit on Position
+function applyQuadraticFitPosition() {
+  state.isLinearized = false;
+  btnToggleLinearize.classList.remove('active');
+
+  const pts = state.series[state.activeSeries];
+  if (pts.length < 3) {
+    alert('Need at least 3 points to fit a parabola.');
+    return;
+  }
+
+  // Target vertical position (y vs t)
+  const dataPts = pts.map(p => ({ x: p.time, y: p.y }));
+  const quad = quadraticRegression(dataPts);
+
+  if (quad) {
+    // Generate smooth line curve
+    const minT = Math.min(...dataPts.map(p => p.x));
+    const maxT = Math.max(...dataPts.map(p => p.x));
+    const linePts = [];
+    const steps = 40;
+    for (let i = 0; i <= steps; i++) {
+      const t = minT + (i / steps) * (maxT - minT);
+      const y = quad.A * t * t + quad.B * t + quad.C;
+      linePts.push({ x: t, y: y });
+    }
+
+    posChart.data.datasets[2].data = linePts;
+    posChart.data.datasets[2].label = `Quadratic Fit: y(t) = ${quad.A.toFixed(2)}t² + ${quad.B.toFixed(2)}t + ${quad.C.toFixed(2)}`;
+    posChart.update();
+
+    fitResultPos.style.display = 'inline-block';
+    fitResultPos.innerHTML = `<strong>Quadratic Fit:</strong> y(t) = <strong>${quad.A.toFixed(3)}</strong>t² + <strong>${quad.B.toFixed(3)}</strong>t + <strong>${quad.C.toFixed(3)}</strong> &nbsp;|&nbsp; <strong>Acceleration a_y = 2A:</strong> <strong>${quad.accel.toFixed(2)} m/s²</strong>`;
+  }
+}
+
+// Perform and Display Linear Fit on Position (e.g., constant velocity x vs t)
+function applyLinearFitPosition() {
+  state.isLinearized = false;
+  btnToggleLinearize.classList.remove('active');
+
+  const pts = state.series[state.activeSeries];
+  if (pts.length < 2) {
+    alert('Need at least 2 points to fit a straight line.');
+    return;
+  }
+
+  const isHoriz = state.motionFilter === 'horizontal';
+  const dataPts = pts.map(p => ({ x: p.time, y: isHoriz ? p.x : p.y }));
+  const lin = linearRegression(dataPts);
+
+  if (lin) {
+    const minT = Math.min(...dataPts.map(p => p.x));
+    const maxT = Math.max(...dataPts.map(p => p.x));
+    posChart.data.datasets[2].data = [
+      { x: minT, y: lin.slope * minT + lin.intercept },
+      { x: maxT, y: lin.slope * maxT + lin.intercept }
+    ];
+    posChart.data.datasets[2].label = `Linear Fit: Slope = ${lin.slope.toFixed(2)} m/s`;
+    posChart.update();
+
+    fitResultPos.style.display = 'inline-block';
+    fitResultPos.innerHTML = `<strong>Linear Fit:</strong> Slope = <strong>${lin.slope.toFixed(3)} m/s</strong>, Intercept = <strong>${lin.intercept.toFixed(3)} m</strong>, R² = <strong>${lin.r2.toFixed(4)}</strong>`;
+  }
+}
+
+// Perform and Display Linear Fit on Velocity (Slope = Acceleration)
+function applyLinearFitVelocity() {
+  const pts = state.series[state.activeSeries];
+  if (pts.length < 2) {
+    alert('Need at least 2 velocity points.');
+    return;
+  }
+
+  const isHoriz = state.motionFilter === 'horizontal';
+  const dataPts = pts.map(p => ({ x: p.time, y: isHoriz ? p.vx : p.vy }));
+  const lin = linearRegression(dataPts);
+
+  if (lin) {
+    const minT = Math.min(...dataPts.map(p => p.x));
+    const maxT = Math.max(...dataPts.map(p => p.x));
+    velChart.data.datasets[2].data = [
+      { x: minT, y: lin.slope * minT + lin.intercept },
+      { x: maxT, y: lin.slope * maxT + lin.intercept }
+    ];
+    velChart.data.datasets[2].label = `Linear Fit: Slope (a) = ${lin.slope.toFixed(2)} m/s²`;
+    velChart.update();
+
+    fitResultVel.style.display = 'inline-block';
+    fitResultVel.innerHTML = `<strong>Velocity Slope (Acceleration a):</strong> <strong>${lin.slope.toFixed(2)} m/s²</strong> &nbsp;|&nbsp; Initial v₀ = <strong>${lin.intercept.toFixed(2)} m/s</strong> &nbsp;|&nbsp; R² = <strong>${lin.r2.toFixed(4)}</strong>`;
+  }
 }
 
 // ==========================================
@@ -867,7 +1141,7 @@ function updateTable() {
   }
 
   pointsTableBody.innerHTML = pts.map((p, idx) => `
-    <tr data-time="${p.time}">
+    <tr data-rawtime="${p.rawTime}">
       <td>${idx + 1}</td>
       <td>${p.time.toFixed(3)}</td>
       <td>${p.x.toFixed(3)}</td>
@@ -877,11 +1151,10 @@ function updateTable() {
     </tr>
   `).join('');
 
-  // Row click navigates video
   pointsTableBody.querySelectorAll('tr').forEach(row => {
     row.addEventListener('click', () => {
-      const t = parseFloat(row.dataset.time);
-      updateTimeAndFrame(t);
+      const rawT = parseFloat(row.dataset.rawtime);
+      updateTimeAndFrame(rawT);
     });
   });
 }
@@ -957,10 +1230,10 @@ function setupEventListeners() {
     updateTimeAndFrame(pct * state.duration);
   });
   fpsInput.addEventListener('change', e => {
-    state.fps = parseInt(e.target.value, 10) || 30;
+    state.fps = parseInt(e.target.value, 10) || 60;
   });
 
-  // Keyboard Shortcuts (Space = Play/Pause, Arrow Left/Right = Frame step)
+  // Keyboard Shortcuts
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     if (e.code === 'Space') {
@@ -977,12 +1250,12 @@ function setupEventListeners() {
 
   // Canvas Interactions
   overlayCanvas.addEventListener('mousemove', e => {
-    updateLoupe(e);
+    updateReticlePreview(e);
     handleCanvasMouseMove(e);
   });
 
   overlayCanvas.addEventListener('mouseleave', () => {
-    loupeCanvas.style.display = 'none';
+    reticlePreview.style.display = 'none';
   });
 
   overlayCanvas.addEventListener('mousedown', handleCanvasMouseDown);
@@ -1025,39 +1298,58 @@ function setupEventListeners() {
       drawOverlay();
     }
   });
+  btnSetTZero.addEventListener('click', setInitialTimeAtFirstPoint);
 
-  // Curve Fits
-  btnFitPosition.addEventListener('click', () => {
-    const pts = state.series[state.activeSeries].map(p => ({ x: p.time, y: p.y }));
-    const quad = quadraticRegression(pts);
-    if (quad) {
-      fitResultPos.style.display = 'inline';
-      fitResultPos.textContent = `y-accel: ${quad.accel.toFixed(2)} m/s²`;
-    } else {
-      alert('Need at least 3 points to fit a quadratic curve.');
-    }
+  // Marker Type & Size Controls
+  markerTypeSelect.addEventListener('change', e => {
+    state.markerType = e.target.value;
+    drawOverlay();
+  });
+  markerSizeSelect.addEventListener('change', e => {
+    state.markerRadius = parseInt(e.target.value, 10) || 14;
+    drawOverlay();
   });
 
-  btnFitVelocity.addEventListener('click', () => {
-    const pts = state.series[state.activeSeries].map(p => ({ x: p.time, y: p.vy }));
-    const lin = linearRegression(pts);
-    if (lin) {
-      fitResultVel.style.display = 'inline';
-      fitResultVel.textContent = `Slope (a_y): ${lin.slope.toFixed(2)} m/s²`;
-    } else {
-      alert('Need at least 2 velocity points for linear fit.');
-    }
+  // Visibility Checkboxes
+  chkShowPoints.addEventListener('change', e => {
+    state.showPoints = e.target.checked;
+    drawOverlay();
   });
-
   chkShowVectors.addEventListener('change', e => {
     state.showVectors = e.target.checked;
     drawOverlay();
   });
-
-  chkShowLoupe.addEventListener('change', e => {
-    state.showLoupe = e.target.checked;
-    if (!state.showLoupe) loupeCanvas.style.display = 'none';
+  chkShowScale.addEventListener('change', e => {
+    state.showScale = e.target.checked;
+    drawOverlay();
   });
+  chkShowOrigin.addEventListener('change', e => {
+    state.showOrigin = e.target.checked;
+    drawOverlay();
+  });
+
+  // Motion Component Filter (Both, Vertical, Horizontal)
+  motionComponentSelect.addEventListener('change', e => {
+    state.motionFilter = e.target.value;
+    updateCharts();
+    drawOverlay();
+  });
+
+  // Linearization Toggle
+  btnToggleLinearize.addEventListener('click', () => {
+    state.isLinearized = !state.isLinearized;
+    if (state.isLinearized) {
+      btnToggleLinearize.classList.add('active');
+    } else {
+      btnToggleLinearize.classList.remove('active');
+    }
+    updateCharts();
+  });
+
+  // Curve Fits
+  btnFitQuadPos.addEventListener('click', applyQuadraticFitPosition);
+  btnFitLinPos.addEventListener('click', applyLinearFitPosition);
+  btnFitVelocity.addEventListener('click', applyLinearFitVelocity);
 
   btnExportCSV.addEventListener('click', exportCSV);
 }
@@ -1068,7 +1360,7 @@ function setTool(tool) {
   if (tool === 'track') toolTrack.classList.add('active');
   if (tool === 'scale') toolScale.classList.add('active');
   if (tool === 'origin') toolOrigin.classList.add('active');
-  updateStatus(`Active Tool: ${tool.toUpperCase()}. ${tool === 'track' ? 'Click on video to place point.' : tool === 'scale' ? 'Drag scale stick handles.' : 'Drag origin axes to position.'}`);
+  updateStatus(`Active Tool: ${tool.toUpperCase()}. ${tool === 'track' ? 'Click on moving object to place circle reticle.' : tool === 'scale' ? 'Drag scale stick handles.' : 'Drag origin axes to position.'}`);
 }
 
 function loadUserVideo(file) {
@@ -1080,10 +1372,11 @@ function loadUserVideo(file) {
   video.onloadedmetadata = () => {
     state.duration = video.duration;
     state.currentTime = 0;
+    state.timeOffset = 0;
     dropzoneOverlay.classList.add('hidden');
     resizeCanvas();
     updateTimeAndFrame(0);
-    updateStatus(`Loaded "${file.name}" (${video.videoWidth}x${video.videoHeight}, ${video.duration.toFixed(2)}s). Ready to track!`);
+    updateStatus(`Loaded "${file.name}" (${video.videoWidth}x${video.videoHeight}, ${video.duration.toFixed(2)}s).`);
   };
 }
 
@@ -1115,7 +1408,6 @@ function handleCanvasMouseDown(e) {
       isDraggingScale = true;
       scaleDragPoint = 'end';
     } else {
-      // Start new line from current point
       isDraggingScale = true;
       scaleDragPoint = 'end';
       state.scaleStick.start = { x: mx, y: my };

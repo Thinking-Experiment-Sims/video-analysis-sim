@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Video Analysis &amp; Motion Tracking - The Thinking Experiment</title>
-  <meta name="description" content="Free, modern in-browser video analysis tool replicating Logger Pro with sub-pixel loupe tracking, scale calibration, and synchronized kinematic plots.">
+  <meta name="description" content="Free, modern in-browser video analysis tool replicating Logger Pro with circle placement reticle, scale calibration, linear/quadratic fits, and parabolic linearization.">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="styles.css">
   <!-- Chart.js for high-performance interactive kinematic plotting -->
@@ -38,7 +38,7 @@
   <main class="app-container">
     <!-- Left Column: Video Workspace & Controls -->
     <section class="card" aria-label="Video Analysis Workspace">
-      <!-- Toolbar -->
+      <!-- Primary Toolbar -->
       <div class="toolbar">
         <div class="tool-group">
           <button id="toolTrack" class="btn btn-amber active" title="Click on the moving object to add tracking points">
@@ -61,31 +61,56 @@
             <option value="A">Point A (Amber)</option>
             <option value="B">Point B (Teal)</option>
           </select>
+          <button id="btnSetTZero" class="btn" style="font-size: 0.78rem; padding: 0.35rem 0.6rem;" title="Shift time axis so the first tracked point is t = 0.000 s">
+            Set t₀ at First Pt
+          </button>
           <button id="btnClearSeries" class="btn btn-icon-only" title="Clear current series points">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
         </div>
 
         <div class="tool-group">
+          <label style="font-size: 0.8rem; color: var(--muted); font-weight: 500;">Marker:</label>
+          <select id="markerTypeSelect" class="input-control" title="Choose point marker type">
+            <option value="circle" selected>Target Circle (Reticle)</option>
+            <option value="point">Single Dot</option>
+          </select>
+          <select id="markerSizeSelect" class="input-control" style="width: 68px;" title="Circle Marker Radius">
+            <option value="8">8 px</option>
+            <option value="14" selected>14 px</option>
+            <option value="20">20 px</option>
+            <option value="28">28 px</option>
+          </select>
+        </div>
+
+        <div class="tool-group" style="margin-left: auto;">
           <label style="font-size: 0.8rem; color: var(--muted); font-weight: 500;">Step:</label>
-          <select id="stepFrameSelect" class="input-control" title="Frames to advance after each click">
+          <select id="stepFrameSelect" class="input-control" style="width: 78px;" title="Frames to advance after each click">
             <option value="1">1 Frame</option>
             <option value="2" selected>2 Frames</option>
             <option value="3">3 Frames</option>
             <option value="5">5 Frames</option>
           </select>
-          <label style="font-size: 0.8rem; color: var(--muted); font-weight: 500; margin-left: 0.4rem;">FPS:</label>
-          <input type="number" id="fpsInput" class="input-control" style="width: 58px;" value="30" min="1" max="480" title="Frames per second">
+          <label style="font-size: 0.8rem; color: var(--muted); font-weight: 500; margin-left: 0.3rem;">FPS:</label>
+          <input type="number" id="fpsInput" class="input-control" style="width: 52px;" value="60" min="1" max="480" title="Frames per second">
         </div>
+      </div>
 
-        <div class="tool-group" style="margin-left: auto;">
-          <label style="font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-            <input type="checkbox" id="chkShowVectors" checked> Show Vectors
-          </label>
-          <label style="font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 0.35rem; cursor: pointer; margin-left: 0.5rem;">
-            <input type="checkbox" id="chkShowLoupe" checked> Magnifier
-          </label>
-        </div>
+      <!-- Secondary Visibility & Component Toolbar -->
+      <div class="secondary-toolbar">
+        <span style="font-weight: 600; color: var(--primary-teal); margin-right: 0.25rem;">Show on Video:</span>
+        <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+          <input type="checkbox" id="chkShowPoints" checked> Points
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+          <input type="checkbox" id="chkShowVectors" checked> Vectors
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+          <input type="checkbox" id="chkShowScale" checked> Scale Stick
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+          <input type="checkbox" id="chkShowOrigin" checked> Coordinate Origin
+        </label>
       </div>
 
       <!-- Video Canvas Stage -->
@@ -93,14 +118,14 @@
         <div class="viewport-container" id="viewportContainer">
           <video id="mainVideo" playsinline preload="auto"></video>
           <canvas id="overlayCanvas"></canvas>
-          <canvas id="loupeCanvas" width="120" height="120"></canvas>
+          <div id="reticlePreview"></div>
         </div>
 
         <!-- Initial Drag & Drop Overlay -->
         <div id="dropzoneOverlay" class="dropzone-overlay">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary-teal)" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
           <h2 class="dropzone-title">Drop a Physics Video Here to Analyze</h2>
-          <p style="color: var(--muted); max-width: 420px; font-size: 0.9rem;">Supports MP4, MOV, and WebM videos. All tracking is computed entirely on your device with 100% privacy.</p>
+          <p style="color: var(--muted); max-width: 440px; font-size: 0.9rem;">Supports MP4, MOV, and WebM videos. Video processing is entirely local and private.</p>
           <div style="margin-top: 0.5rem;">
             <p style="font-size: 0.8rem; font-weight: 600; color: var(--subtle); text-transform: uppercase; margin-bottom: 0.5rem;">Or explore built-in standard physics experiments:</p>
             <div class="preset-pills">
@@ -144,39 +169,101 @@
     <aside class="card" aria-label="Kinematic Data and Plots">
       <nav class="tabs-nav">
         <button class="tab-btn active" data-tab="tab-graphs">Graphs &amp; Fits</button>
+        <button class="tab-btn" data-tab="tab-linearization">Linearization Guide</button>
         <button class="tab-btn" data-tab="tab-table">Data Table</button>
-        <button class="tab-btn" data-tab="tab-calibration">Scale &amp; Axes</button>
+        <button class="tab-btn" data-tab="tab-calibration">Scale &amp; Calibration</button>
       </nav>
 
       <div class="card-body">
         <!-- Graphs Tab -->
         <div id="tab-graphs" class="tab-content active">
-          <!-- Graph 1: Position vs Time -->
-          <div class="graph-card">
+          <!-- Graph Motion Component Selector & Fit Controls -->
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; background: var(--surface-alt); padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="font-size: 0.82rem; font-weight: 600; color: var(--primary-teal);">Display Motion:</span>
+              <select id="motionComponentSelect" class="input-control">
+                <option value="both" selected>Both (Vertical y &amp; Horizontal x)</option>
+                <option value="vertical">Vertical Motion Only (y)</option>
+                <option value="horizontal">Horizontal Motion Only (x)</option>
+              </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <button id="btnToggleLinearize" class="btn btn-amber" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;" title="Linearize parabolic vertical motion using apex or t²">
+                Linearize: y vs (t-t_apex)²
+              </button>
+            </div>
+          </div>
+
+          <!-- Graph 1: Position vs Time (PRIMARY FOCUS) -->
+          <div class="graph-card" style="height: 330px;">
             <div class="graph-header">
-              <span class="graph-title">Position vs. Time (y &amp; x vs. t)</span>
-              <div class="tool-group" style="border: none; padding: 0; margin: 0;">
-                <button id="btnFitPosition" class="btn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Curve Fit</button>
-                <span id="fitResultPos" class="fit-readout" style="display: none;"></span>
+              <span class="graph-title" id="posChartTitle">Position vs. Time (y &amp; x vs. t)</span>
+              <div style="display: flex; gap: 0.35rem; align-items: center;">
+                <button id="btnFitQuadPos" class="btn" style="padding: 0.25rem 0.55rem; font-size: 0.75rem;" title="Fit quadratic parabola y = A·t² + B·t + C">Quadratic Fit</button>
+                <button id="btnFitLinPos" class="btn" style="padding: 0.25rem 0.55rem; font-size: 0.75rem;" title="Fit linear constant velocity x = m·t + b">Linear Fit</button>
               </div>
             </div>
+            <div id="fitResultPos" class="fit-readout" style="display: none; margin-bottom: 0.35rem;"></div>
             <div class="chart-canvas-container">
               <canvas id="posChart"></canvas>
             </div>
           </div>
 
           <!-- Graph 2: Velocity vs Time -->
-          <div class="graph-card">
+          <div class="graph-card" style="height: 250px;">
             <div class="graph-header">
-              <span class="graph-title">Velocity vs. Time (v<sub>y</sub> &amp; v<sub>x</sub> vs. t)</span>
-              <div class="tool-group" style="border: none; padding: 0; margin: 0;">
-                <button id="btnFitVelocity" class="btn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Linear Fit</button>
-                <span id="fitResultVel" class="fit-readout" style="display: none;"></span>
+              <span class="graph-title" id="velChartTitle">Velocity vs. Time (v<sub>y</sub> &amp; v<sub>x</sub> vs. t)</span>
+              <div style="display: flex; gap: 0.35rem; align-items: center;">
+                <button id="btnFitVelocity" class="btn" style="padding: 0.25rem 0.55rem; font-size: 0.75rem;">Linear Fit (Slope = a)</button>
               </div>
             </div>
+            <div id="fitResultVel" class="fit-readout" style="display: none; margin-bottom: 0.35rem;"></div>
             <div class="chart-canvas-container">
               <canvas id="velChart"></canvas>
             </div>
+          </div>
+        </div>
+
+        <!-- Linearization Tab (Pedagogy & Apex Discovery) -->
+        <div id="tab-linearization" class="tab-content">
+          <div class="pedagogy-card">
+            <h4>💡 Why Linearize Parabolic Motion?</h4>
+            <p>
+              In physics, fitting a parabola $y(t) = \frac{1}{2}at^2 + v_0t + y_0$ contains three dependent parameters $(a, v_0, y_0)$. Simply graphing $y$ versus $t^2$ <strong>does not produce a straight line</strong> unless the initial velocity $v_0 = 0$.
+            </p>
+            <div class="formula-box">
+              General Kinematics: y(t) = ½at² + v₀t + y₀
+            </div>
+          </div>
+
+          <div class="pedagogy-card">
+            <h4>🎯 The Discovery Method: Avoiding Dependence on v₀</h4>
+            <p>
+              How can students isolate acceleration $a$ without needing $v_0 = 0$ at the release point?
+            </p>
+            <p>
+              <strong>Look at the apex (peak) of the position-time curve!</strong>
+              At the apex $(t_{\text{apex}}, y_{\text{apex}})$, the instantaneous vertical velocity is exactly zero:
+              <br>
+              <code>v_y(t_apex) = 0</code>
+            </p>
+            <div class="formula-box">
+              Shifted Vertex Form:
+              <br>
+              [y - y_apex] = ½a · (t - t_apex)²
+              <br><br>
+              Let Y' = (y - y_apex) and X' = (t - t_apex)²:
+              <br>
+              → Y' = Slope · X'  where Slope = ½a
+            </div>
+            <p style="font-size: 0.8rem; color: var(--primary-teal); font-weight: 600;">
+              Clicking "Linearize: y vs (t-t_apex)²" on the Graphs tab automatically detects the apex of your tracked points and plots this linearized model! The slope equals ½a (or -4.9 m/s² for free fall), yielding acceleration directly.
+            </p>
+          </div>
+
+          <div class="info-banner">
+            <strong>About Vectors:</strong>
+            The "Vectors" toggle draws arrows scaled to instantaneous velocity $(\vec{v} = v_x\hat{i} + v_y\hat{j})$. In projectile motion, note how the horizontal arrow remains constant while the vertical arrow shrinks to zero at the apex and points downward on descent!
           </div>
         </div>
 
@@ -209,8 +296,8 @@
         <!-- Scale & Calibration Tab -->
         <div id="tab-calibration" class="tab-content">
           <div class="info-banner">
-            <strong>Calibration Settings:</strong>
-            Set known object lengths and configure your coordinate axes.
+            <strong>Calibration &amp; Coordinates:</strong>
+            Drag the amber calibration stick across a known length in the video to convert pixels into meters.
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
@@ -220,7 +307,7 @@
                 <input type="number" id="scaleLengthInput" class="input-control" value="1.0" step="0.01" min="0.001" style="flex: 1;">
                 <button id="btnApplyScale" class="btn btn-amber">Calibrate</button>
               </div>
-              <p id="scaleReadout" style="font-size: 0.78rem; color: var(--muted); margin-top: 0.35rem;">Current Scale: 1 px = 0.0050 m (200.0 px/m)</p>
+              <p id="scaleReadout" style="font-size: 0.78rem; color: var(--muted); margin-top: 0.35rem;">Current Scale: 1 px = 0.0071 m (140.0 px/m)</p>
             </div>
 
             <hr style="border: 0; border-top: 1px solid var(--border-light);">
@@ -237,11 +324,9 @@
             <hr style="border: 0; border-top: 1px solid var(--border-light);">
 
             <div>
-              <label style="font-size: 0.82rem; font-weight: 600; color: var(--ink);">Kinematic Differentiation:</label>
+              <label style="font-size: 0.82rem; font-weight: 600; color: var(--ink);">Vector Visualization Explained:</label>
               <p style="font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem;">
-                Calculated using 3-point central finite differences:
-                <br>
-                <code>v<sub>i</sub> = (x<sub>i+1</sub> - x<sub>i-1</sub>) / (t<sub>i+1</sub> - t<sub>i-1</sub>)</code>
+                When <strong>Show Vectors</strong> is checked, green/amber arrows originate from each tracked point. The length and direction of each arrow represent the magnitude and direction of the instantaneous velocity vector $\vec{v}$.
               </p>
             </div>
           </div>
