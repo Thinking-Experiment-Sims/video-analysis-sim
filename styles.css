@@ -36,6 +36,125 @@
   --radius-lg: 14px;
 }
 
+/* ========================================================================== */
+/* The Thinking Experiment Standard Shell & Hero Header                       */
+/* ========================================================================== */
+
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(15, 126, 155, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(214, 123, 25, 0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(circle at center, black 40%, transparent 95%);
+}
+
+.shell {
+  width: min(1560px, calc(100% - 2rem));
+  margin-inline: auto;
+  padding-bottom: 2.5rem;
+}
+
+.hero {
+  margin-top: 1.2rem;
+  margin-bottom: 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.3rem 1.8rem;
+  background: linear-gradient(160deg, #ffffff 65%, #f6fbfd 100%);
+  box-shadow: 0 4px 16px rgba(12, 54, 68, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 8px;
+  background: linear-gradient(180deg, var(--primary-teal), #08495c);
+  border-radius: 14px 0 0 14px;
+}
+
+.hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.hero-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--primary-teal-light);
+  color: #095f76;
+  border: 1px solid var(--primary-teal-border);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+
+.brand-badge:hover {
+  background: #d4ecf4;
+  color: #08495c;
+  transform: translateY(-1px);
+}
+
+.lab-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-amber-dark);
+  background: var(--accent-amber-light);
+  border: 1px solid var(--accent-amber-border);
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+}
+
+.kicker {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0.35rem 0 0.2rem 0;
+}
+
+.hero h1 {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--primary-teal);
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35rem 0;
+}
+
+.subtitle {
+  font-size: 0.92rem;
+  color: var(--muted);
+  max-width: 1080px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+
+
 * {
   box-sizing: border-box;
   margin: 0;

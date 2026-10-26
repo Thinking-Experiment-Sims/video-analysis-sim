@@ -14,29 +14,39 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}, {left: '$', right: '$', display: false}]});"></script>
 </head>
-<body>
-  <!-- Header -->
-  <header class="app-header">
-    <div class="brand-group">
-      <span class="brand-badge">PhysicsKit</span>
-      <h1 class="brand-title">MotionTracker <span class="brand-subtitle">Modern Video Analysis</span></h1>
-    </div>
-    <div class="header-actions">
-      <button id="btnSampleSelect" class="btn" title="Choose a pre-recorded physics experiment">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-        Sample Videos
-      </button>
-      <label for="videoFileInput" class="btn btn-primary" title="Open any video file from your computer">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-        Open Video
-      </label>
-      <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/quicktime" style="display:none;">
-      <button id="btnExportCSV" class="btn btn-amber" title="Export tracked data to CSV">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        Export CSV
-      </button>
-    </div>
-  </header>
+<body data-theme="light">
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <div class="shell">
+    <!-- Header -->
+    <header class="hero" role="banner">
+      <div class="hero-top">
+        <div class="hero-badges">
+          <a href="https://thinking-experiment-sims.github.io/interactive-physics/" class="brand-badge" title="Return to Physics Simulations Hub">← The Thinking Experiment</a>
+          <span class="lab-badge">📹 Motion Tracking Tool</span>
+        </div>
+        <div class="header-actions">
+          <button id="btnSampleSelect" class="btn" title="Choose a pre-recorded physics experiment">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            Sample Videos
+          </button>
+          <label for="videoFileInput" class="btn btn-primary" title="Open any video file from your computer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Open Video
+          </label>
+          <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/quicktime" style="display:none;">
+          <button id="btnExportCSV" class="btn btn-amber" title="Export tracked data to CSV">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Export CSV
+          </button>
+        </div>
+      </div>
+      <p class="kicker">The Thinking Experiment &bull; PhysicsKit</p>
+      <h1>MotionTracker: Modern Video Analysis</h1>
+      <p class="subtitle">
+        High-precision browser-based motion analysis and video tracking. Place circle reticles frame-by-frame, calibrate real-world distance scales, place coordinate axes, and fit linear, quadratic, and linearized curves.
+      </p>
+    </header>
 
   <!-- Main Container -->
   <main class="app-container">
@@ -338,11 +348,12 @@
     </aside>
   </main>
 
-  <!-- Status Bar Footer -->
-  <footer class="status-bar">
-    <div>Status: <span id="statusMessage" style="font-weight: 500; color: var(--ink);">Ready. Select a sample video or open your own video file to begin.</span></div>
-    <div>PhysicsKit • The Thinking Experiment</div>
-  </footer>
+    <!-- Status Bar Footer -->
+    <footer class="status-bar">
+      <div>Status: <span id="statusMessage" style="font-weight: 500; color: var(--ink);">Ready. Select a sample video or open your own video file to begin.</span></div>
+      <div>PhysicsKit • The Thinking Experiment</div>
+    </footer>
+  </div>
 
   <!-- Simulation Application Logic -->
   <script src="simulation.js"></script>
