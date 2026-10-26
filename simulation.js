@@ -1387,8 +1387,10 @@ let scaleDragPoint = null;
 
 function handleCanvasMouseDown(e) {
   const rect = overlayCanvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+  const scaleX = overlayCanvas.width / rect.width;
+  const scaleY = overlayCanvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
 
   if (state.activeTool === 'track') {
     addTrackPoint(mx, my);
@@ -1401,10 +1403,10 @@ function handleCanvasMouseDown(e) {
     const dStart = Math.hypot(mx - state.scaleStick.start.x, my - state.scaleStick.start.y);
     const dEnd = Math.hypot(mx - state.scaleStick.end.x, my - state.scaleStick.end.y);
 
-    if (dStart < 15) {
+    if (dStart < 25) {
       isDraggingScale = true;
       scaleDragPoint = 'start';
-    } else if (dEnd < 15) {
+    } else if (dEnd < 25) {
       isDraggingScale = true;
       scaleDragPoint = 'end';
     } else {
@@ -1412,14 +1414,17 @@ function handleCanvasMouseDown(e) {
       scaleDragPoint = 'end';
       state.scaleStick.start = { x: mx, y: my };
       state.scaleStick.end = { x: mx, y: my };
+      drawOverlay();
     }
   }
 }
 
 function handleCanvasMouseMove(e) {
   const rect = overlayCanvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+  const scaleX = overlayCanvas.width / rect.width;
+  const scaleY = overlayCanvas.height / rect.height;
+  const mx = Math.max(0, Math.min(overlayCanvas.width, (e.clientX - rect.left) * scaleX));
+  const my = Math.max(0, Math.min(overlayCanvas.height, (e.clientY - rect.top) * scaleY));
 
   if (isDraggingOrigin) {
     state.origin = { x: mx, y: my };
