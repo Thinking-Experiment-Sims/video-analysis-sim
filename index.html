@@ -3,17 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sports Analytics &amp; Projectile Video Lab - The Thinking Experiment</title>
-  <meta name="description" content="Physics of Sports Analytics & Video Motion Lab: Replicate Logger Pro, generate 6 kinematics graphs, sample 10 tangent slopes, calculate kinematic theoretical percent differences, and export complete 8-slide PowerPoint presentations.">
+  <title>Video Analysis &amp; Motion Tracking - The Thinking Experiment</title>
+  <meta name="description" content="Free, modern in-browser video analysis tool replicating Logger Pro with circle placement reticle, scale calibration, linear/quadratic fits, and parabolic linearization.">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="styles.css">
-  
   <!-- Chart.js for high-performance interactive kinematic plotting -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  
-  <!-- PptxGenJS for client-side Microsoft PowerPoint (.pptx) deck generation -->
-  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-
   <!-- KaTeX for beautiful math and physics formula rendering -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -24,69 +19,27 @@
   <header class="app-header">
     <div class="brand-group">
       <span class="brand-badge">PhysicsKit</span>
-      <h1 class="brand-title">MotionTracker <span class="brand-subtitle">Sports Analytics &amp; Video Lab</span></h1>
+      <h1 class="brand-title">MotionTracker <span class="brand-subtitle">Modern Video Analysis</span></h1>
     </div>
     <div class="header-actions">
-      <button id="btnSampleSelect" class="btn" title="Choose a pre-recorded physics or sports experiment">
+      <button id="btnSampleSelect" class="btn" title="Choose a pre-recorded physics experiment">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-        Sports Presets
+        Sample Videos
       </button>
       <label for="videoFileInput" class="btn btn-primary" title="Open any video file from your computer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
         Open Video
       </label>
       <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/quicktime" style="display:none;">
-      <button id="btnExportCSV" class="btn" title="Export tracked data to CSV">
+      <button id="btnExportCSV" class="btn btn-amber" title="Export tracked data to CSV">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         Export CSV
       </button>
     </div>
   </header>
 
-  <!-- Project Progress Stepper & Student Profile -->
-  <div class="project-stepper-wrap">
-    <nav class="project-stepper" aria-label="Project Lab Workflow">
-      <button class="step-btn active" id="stepBtn1" data-step="1">
-        <span class="step-num">1</span> Video &amp; Scale
-      </button>
-      <button class="step-btn" id="stepBtn2" data-step="2">
-        <span class="step-num">2</span> Track Motion
-      </button>
-      <button class="step-btn" id="stepBtn3" data-step="3">
-        <span class="step-num">3</span> 6-Graph Studio &amp; Tangents
-      </button>
-      <button class="step-btn" id="stepBtn4" data-step="4">
-        <span class="step-num">4</span> Guided Calculations
-      </button>
-      <button class="step-btn" id="stepBtn5" data-step="5">
-        <span class="step-num">5</span> Presentation &amp; Reports
-      </button>
-    </nav>
-
-    <div class="student-meta-bar">
-      <label for="studentNameInput">Student:</label>
-      <input type="text" id="studentNameInput" class="input-control" placeholder="Enter student name" style="width: 150px;">
-      
-      <label for="teacherSelect">Teacher:</label>
-      <select id="teacherSelect" class="input-control" style="width: 120px;">
-        <option value="Mr. Lopez">Mr. Lopez</option>
-        <option value="Ms. Cross">Ms. Cross</option>
-        <option value="Dr. Robinson">Dr. Robinson</option>
-        <option value="Physics Teacher">Physics Teacher</option>
-      </select>
-
-      <button id="btnSaveSession" class="btn" title="Save your work session to a JSON file" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;">
-        💾 Save Lab
-      </button>
-      <button id="btnLoadSession" class="btn" title="Resume your work from a JSON file" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;">
-        📂 Load Lab
-      </button>
-      <input type="file" id="loadSessionInput" accept=".json" style="display:none;">
-    </div>
-  </div>
-
-  <!-- Stage 1 & 2: Video Analysis Workspace Stage -->
-  <main class="app-container" id="videoWorkspaceStage">
+  <!-- Main Container -->
+  <main class="app-container">
     <!-- Left Column: Video Workspace & Controls -->
     <section class="card" aria-label="Video Analysis Workspace">
       <!-- Primary Toolbar -->
@@ -181,8 +134,6 @@
             <p style="font-size: 0.8rem; font-weight: 600; color: var(--subtle); text-transform: uppercase; margin-bottom: 0.5rem;">Or explore built-in standard physics experiments:</p>
             <div class="preset-pills">
               <button class="pill-btn" data-preset="projectile">⚽ 2D Projectile Motion</button>
-              <button class="pill-btn" data-preset="basketball">🏀 Basketball Arc (3-Pt Shot)</button>
-              <button class="pill-btn" data-preset="soccer">⚽ Soccer Chip Kick</button>
               <button class="pill-btn" data-preset="freefall">🏀 Free Fall (g = 9.8 m/s²)</button>
               <button class="pill-btn" data-preset="pendulum">⏱️ Simple Harmonic Pendulum</button>
               <button class="pill-btn" data-preset="cart">🛒 Elastic Cart Collision</button>
@@ -233,11 +184,11 @@
           <!-- Graph Motion Component Selector & Fit Controls -->
           <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; background: var(--surface-alt); padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
             <div style="display: flex; align-items: center; gap: 0.4rem;">
-              <span style="font-size: 0.82rem; font-weight: 600; color: var(--primary-teal);">Display:</span>
+              <span style="font-size: 0.82rem; font-weight: 600; color: var(--primary-teal);">Display Motion:</span>
               <select id="motionComponentSelect" class="input-control">
-                <option value="both" selected>Both (y &amp; x)</option>
-                <option value="vertical">Vertical Only (y)</option>
-                <option value="horizontal">Horizontal Only (x)</option>
+                <option value="both" selected>Both (Vertical y &amp; Horizontal x)</option>
+                <option value="vertical">Vertical Motion Only (y)</option>
+                <option value="horizontal">Horizontal Motion Only (x)</option>
               </select>
             </div>
             <div style="display: flex; align-items: center; gap: 0.4rem;">
@@ -247,7 +198,7 @@
             </div>
           </div>
 
-          <!-- Graph 1: Position vs Time -->
+          <!-- Graph 1: Position vs Time (PRIMARY FOCUS) -->
           <div class="graph-card" style="height: 330px;">
             <div class="graph-header">
               <span class="graph-title" id="posChartTitle">Position vs. Time (y &amp; x vs. t)</span>
@@ -277,15 +228,15 @@
           </div>
         </div>
 
-        <!-- Linearization Tab -->
+        <!-- Linearization Tab (Pedagogy & Apex Discovery) -->
         <div id="tab-linearization" class="tab-content">
           <div class="pedagogy-card">
             <h4>💡 Why Linearize Parabolic Motion?</h4>
             <p>
-              In physics, fitting a parabola \(y(t) = rac{1}{2}at^2 + v_0t + y_0\) contains three dependent parameters \((a, v_0, y_0)\). Simply graphing \(y\) versus \(t^2\) <strong>does not produce a straight line</strong> unless the initial velocity \(v_0 = 0\).
+              In physics, fitting a parabola \(y(t) = \frac{1}{2}at^2 + v_0t + y_0\) contains three dependent parameters \((a, v_0, y_0)\). Simply graphing \(y\) versus \(t^2\) <strong>does not produce a straight line</strong> unless the initial velocity \(v_0 = 0\).
             </p>
             <div class="formula-box" style="text-align: center; font-size: 1rem;">
-              \[y(t) = rac{1}{2}at^2 + v_0t + y_0\]
+              \[y(t) = \frac{1}{2}at^2 + v_0t + y_0\]
             </div>
           </div>
 
@@ -296,16 +247,26 @@
             </p>
             <p>
               <strong>Look at the apex (peak) of the position-time curve!</strong>
-              At the apex \((t_{	ext{apex}}, y_{	ext{apex}})\), the instantaneous vertical velocity is exactly zero: \(v_y(t_{	ext{apex}}) = 0\).
+              At the apex \((t_{\text{apex}}, y_{\text{apex}})\), the instantaneous vertical velocity is exactly zero:
+              <br>
+              \[v_y(t_{\text{apex}}) = 0\]
             </p>
             <div class="formula-box">
               <div style="font-weight: 600; margin-bottom: 0.35rem; color: var(--primary-teal);">Shifted Vertex Form:</div>
-              \[[y - y_{	ext{apex}}] = rac{1}{2}a(t - t_{	ext{apex}})^2\]
+              \[[y - y_{\text{apex}}] = \frac{1}{2}a(t - t_{\text{apex}})^2\]
               <div style="margin-top: 0.5rem;">
-                Let \(Y' = [y - y_{	ext{apex}}]\) and \(X' = (t - t_{	ext{apex}})^2\):
-                \[Y' = (	ext{Slope}) \cdot X' \quad 	ext{where} \quad 	ext{Slope} = rac{1}{2}a \implies a = 2 \cdot (	ext{Slope})\]
+                Let \(Y' = [y - y_{\text{apex}}]\) and \(X' = (t - t_{\text{apex}})^2\):
+                \[Y' = (\text{Slope}) \cdot X' \quad \text{where} \quad \text{Slope} = \frac{1}{2}a \implies a = 2 \cdot (\text{Slope})\]
               </div>
             </div>
+            <p style="font-size: 0.85rem; color: var(--primary-teal); font-weight: 600; margin-top: 0.4rem;">
+              Clicking <strong>"Linearize: y vs (t-t_apex)²"</strong> on the Graphs tab automatically detects the apex of your tracked points and plots this linearized model! The slope equals \(\frac{1}{2}a\) (or \(-4.9\text{ m/s}^2\) for free fall), yielding acceleration directly.
+            </p>
+          </div>
+
+          <div class="info-banner">
+            <strong>About Vectors:</strong>
+            The "Vectors" toggle draws arrows scaled to instantaneous velocity \(\vec{v} = v_x\hat{i} + v_y\hat{j}\). In projectile motion, note how the horizontal arrow remains constant while the vertical arrow shrinks to zero at the apex and points downward on descent!
           </div>
         </div>
 
@@ -362,357 +323,20 @@
                 <button id="btnResetOrigin" class="btn" style="margin-left: auto;">Center Origin</button>
               </div>
             </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-light);">
+
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 600; color: var(--ink);">Vector Visualization Explained:</label>
+              <p style="font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem;">
+                When <strong>Show Vectors</strong> is checked, arrows originate from each tracked point. The length and direction of each arrow represent the magnitude and direction of the instantaneous velocity vector \(\vec{v} = v_x\hat{i} + v_y\hat{j}\).
+              </p>
+            </div>
           </div>
         </div>
       </div>
     </aside>
   </main>
-
-  <!-- Stage 3: 6-Graph Kinematics Studio Stage -->
-  <section id="stepView3" class="step-view" style="padding: 1.25rem 1.5rem; max-width: 1500px; margin: 0 auto;">
-    <div class="card" style="padding: 1.25rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
-        <div>
-          <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--primary-teal); margin: 0;">Kinematics Studio: 6 Required Graphs &amp; Tangents</h2>
-          <p style="font-size: 0.85rem; color: var(--muted); margin: 0.25rem 0 0 0;">Inspect each motion graph, view general and particular equations with explicit units, and use the tangent tool to sample 10 points for velocity.</p>
-        </div>
-        <div style="display: flex; gap: 0.5rem;">
-          <button id="btnAutoFitAll" class="btn btn-amber" style="font-size: 0.8rem;">Auto-Fit All 6 Graphs</button>
-        </div>
-      </div>
-
-      <!-- Graph Subnav -->
-      <div class="graph-subnav">
-        <button class="graph-nav-btn active" data-graph="y-pos">1. Vertical Pos y(t)</button>
-        <button class="graph-nav-btn" data-graph="x-pos">2. Horizontal Pos x(t)</button>
-        <button class="graph-nav-btn" data-graph="y-vel">3. Vertical Vel vy(t) [Tangents]</button>
-        <button class="graph-nav-btn" data-graph="x-vel">4. Horizontal Vel vx(t)</button>
-        <button class="graph-nav-btn" data-graph="y-acc">5. Vertical Acc ay(t)</button>
-        <button class="graph-nav-btn" data-graph="x-acc">6. Horizontal Acc ax(t)</button>
-        <button class="graph-nav-btn" data-graph="grid-all" style="margin-left: auto;">▦ All 6 Graphs Grid</button>
-      </div>
-
-      <!-- Interactive Tangent Tool Bar (Shown when y-pos or y-vel is selected) -->
-      <div id="tangentStudioBar" class="tangent-studio-bar">
-        <div class="tangent-stats-wrap">
-          <span style="font-weight: 700; font-size: 0.85rem; color: var(--accent-amber-dark);">Tangent Line Sampler:</span>
-          <span class="tangent-pill" id="tangentPointCountBadge">Sampled: 0 / 10 Tangent Points</span>
-          <span style="font-size: 0.82rem; color: var(--ink);">Time: <strong id="tangentTimeDisplay">0.00 s</strong> | Slope (\(v_y\)): <strong id="tangentSlopeDisplay">0.00 m/s</strong></span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <input type="range" id="tangentSlider" class="scrub-slider" min="0" max="100" value="0" style="width: 180px;">
-          <button id="btnRecordTangent" class="btn btn-amber" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;">Record Tangent Point</button>
-          <button id="btnAutoSampleTangents" class="btn" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;">Auto-Sample 10 Tangents</button>
-        </div>
-      </div>
-
-      <!-- Single Graph Focus Container -->
-      <div id="singleGraphContainer" style="display: flex; flex-direction: column; gap: 1rem;">
-        <div class="equation-box">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span class="equation-label" id="activeGraphEqTitle">Vertical Position Equations</span>
-            <span id="activeGraphR2" style="font-size: 0.8rem; font-weight: 600; color: var(--primary-teal);">R² = 0.998</span>
-          </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 2rem; margin-top: 0.35rem;">
-            <div>
-              <span style="font-size: 0.75rem; color: var(--subtle); font-weight: 600;">GENERAL EQUATION:</span>
-              <div class="equation-formula" id="activeGeneralEq">\[y(t) = rac{1}{2}a_y t^2 + v_{0y} t + y_0\]</div>
-            </div>
-            <div>
-              <span style="font-size: 0.75rem; color: var(--subtle); font-weight: 600;">PARTICULAR EQUATION (WITH UNITS):</span>
-              <div class="equation-formula" id="activeParticularEq">\[y(t) = (-4.90	ext{ m/s}^2)t^2 + (4.25	ext{ m/s})t + (1.10	ext{ m})\]</div>
-            </div>
-          </div>
-        </div>
-
-        <div style="height: 480px; position: relative;">
-          <canvas id="activeGraphCanvas"></canvas>
-        </div>
-      </div>
-
-      <!-- Grid Overview Container (Hidden by default) -->
-      <div id="gridAllContainer" class="six-graph-grid" style="display: none;">
-        <div class="grid-graph-card">
-          <div class="grid-graph-header">
-            <span class="grid-graph-title">1. Vertical Position y(t)</span>
-            <span id="gridEqYPos" style="font-size: 0.72rem; color: var(--muted);">Quadratic Fit</span>
-          </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridYPos"></canvas></div>
-        </div>
-        <div class="grid-graph-card">
-          <div class="grid-graph-header">
-            <span class="grid-graph-title">2. Horizontal Position x(t)</span>
-            <span id="gridEqXPos" style="font-size: 0.72rem; color: var(--muted);">Linear Fit</span>
-          </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridXPos"></canvas></div>
-        </div>
-        <div class="grid-graph-card">
-          <div class="grid-graph-header">
-            <span class="grid-graph-title">3. Vertical Velocity vy(t) [Tangents]</span>
-            <span id="gridEqYVel" style="font-size: 0.72rem; color: var(--muted);">10 Tangents Fit</span>
-          </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridYVel"></canvas></div>
-        </div>
-        <div class="grid-graph-card">
-          <div class="grid-graph-header">
-            <span class="grid-graph-title">4. Horizontal Velocity vx(t)</span>
-            <span id="gridEqXVel" style="font-size: 0.72rem; color: var(--muted);">Linear Fit</span>
-          </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridXVel"></canvas></div>
-        </div>
-        <div class="grid-graph-card">
-          <div class="grid-graph-header">
-            <span class="grid-graph-title">5. Vertical Acceleration ay(t)</span>
-            <span id="gridEqYAcc" style="font-size: 0.72rem; color: var(--muted);">ay ≈ -9.8 m/s²</span>
-          </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridYAcc"></canvas></div>
-        </div>
-        <div class="grid-graph-card">
-          <div class="grid-graph-header">
-            <span class="grid-graph-title">6. Horizontal Acceleration ax(t)</span>
-            <span id="gridEqXAcc" style="font-size: 0.72rem; color: var(--muted);">ax ≈ 0 m/s²</span>
-          </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridXAcc"></canvas></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Stage 4: Guided Calculations Workspace Stage -->
-  <section id="stepView4" class="step-view" style="padding: 1.25rem 1.5rem;">
-    <div class="workspace-container">
-      <!-- Worksheet Header -->
-      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--primary-teal); margin: 0;">Physics of Sports Analytics Workspace</h2>
-          <p style="font-size: 0.88rem; color: var(--muted); margin: 0.25rem 0 0 0;">Complete all lab calculations, compare measured curve fits with theoretical kinematic models, and verify consistency.</p>
-        </div>
-        <button id="btnAutoCalculateWorksheet" class="btn btn-amber">Auto-Calculate from Curve Fits</button>
-      </div>
-
-      <!-- Section 1: Measured Values from Logger Pro Fits -->
-      <div class="worksheet-card">
-        <div class="worksheet-card-header">
-          <span class="worksheet-card-title">1. Best-Fit Values from Motion Graphs</span>
-          <span style="font-size: 0.8rem; color: var(--muted);">Extracted from Position &amp; Velocity curves</span>
-        </div>
-        <div class="worksheet-card-body">
-          <div class="calc-grid-2">
-            <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin-bottom: 0.75rem;">Horizontal Motion (x)</h4>
-              <div class="calc-field-group">
-                <label>Initial Horizontal Position \(x_0\) (m):</label>
-                <input type="number" id="inpX0" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-              <div class="calc-field-group" style="margin-top: 0.5rem;">
-                <label>Initial Horizontal Velocity \(v_{0x}\) (m/s):</label>
-                <input type="number" id="inpVx0" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-              <div class="calc-field-group" style="margin-top: 0.5rem;">
-                <label>Horizontal Acceleration \(a_x\) (m/s²):</label>
-                <input type="number" id="inpAx" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-              <div style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--muted);">
-                Reference comparison: \(|a_x - 0	ext{ m/s}^2| =\) <strong id="lblAxDiff">0.00 m/s²</strong>
-              </div>
-            </div>
-
-            <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin-bottom: 0.75rem;">Vertical Motion (y)</h4>
-              <div class="calc-field-group">
-                <label>Initial Vertical Position \(y_0\) (m):</label>
-                <input type="number" id="inpY0" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-              <div class="calc-field-group" style="margin-top: 0.5rem;">
-                <label>Initial Vertical Velocity \(v_{0y}\) (m/s):</label>
-                <input type="number" id="inpVy0" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-              <div class="calc-field-group" style="margin-top: 0.5rem;">
-                <label>Vertical Acceleration \(a_y\) (m/s²):</label>
-                <input type="number" id="inpAy" class="input-control" step="0.001" placeholder="-9.800">
-              </div>
-              <div style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.8rem; color: var(--muted);">Percent difference from \(g = -9.80	ext{ m/s}^2\):</span>
-                <span class="pct-diff-badge" id="badgeAyPctDiff">0.0% Diff</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 2: Range Calculation & Comparison -->
-      <div class="worksheet-card">
-        <div class="worksheet-card-header">
-          <span class="worksheet-card-title">2. Range of the Object (\(R\))</span>
-          <span class="pct-diff-badge" id="badgeRangePctDiff">0.0% Diff</span>
-        </div>
-        <div class="worksheet-card-body">
-          <div class="calc-grid-2">
-            <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Range:</strong> Using kinematic equations for accelerating motion with \(v_{0x}\) and total hang time \(t_{	ext{hang}}\):</p>
-              <div class="calc-field-group">
-                <label>Calculated Range \(R_{	ext{calc}}\) (m):</label>
-                <input type="number" id="inpCalcRange" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-            </div>
-            <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Range:</strong> From data table initial and final positions: \(\Delta x = x_{	ext{final}} - x_{	ext{initial}}\):</p>
-              <div class="calc-field-group">
-                <label>Measured Range \(R_{	ext{meas}}\) (m):</label>
-                <input type="number" id="inpMeasRange" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 3: Hang Time Calculation & Comparison -->
-      <div class="worksheet-card">
-        <div class="worksheet-card-header">
-          <span class="worksheet-card-title">3. Hang Time of the Object (\(t_{	ext{hang}}\))</span>
-          <span class="pct-diff-badge" id="badgeHangTimePctDiff">0.0% Diff</span>
-        </div>
-        <div class="worksheet-card-body">
-          <div class="calc-grid-2">
-            <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Hang Time:</strong> Solving quadratic equation \(y(t) = y_{	ext{final}}\) for accelerating flight:</p>
-              <div class="calc-field-group">
-                <label>Calculated Hang Time \(t_{	ext{hang,calc}}\) (s):</label>
-                <input type="number" id="inpCalcHangTime" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-            </div>
-            <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Hang Time:</strong> By subtracting final and initial time: \(\Delta t = t_{	ext{final}} - t_{	ext{initial}}\):</p>
-              <div class="calc-field-group">
-                <label>Measured Hang Time \(t_{	ext{hang,meas}}\) (s):</label>
-                <input type="number" id="inpMeasHangTime" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 4: Maximum Height Calculation & Comparison -->
-      <div class="worksheet-card">
-        <div class="worksheet-card-header">
-          <span class="worksheet-card-title">4. Maximum Height of the Object (\(y_{\max}\))</span>
-          <span class="pct-diff-badge" id="badgeMaxHeightPctDiff">0.0% Diff</span>
-        </div>
-        <div class="worksheet-card-body">
-          <div class="calc-grid-2">
-            <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Max Height:</strong> Using \(v_y = 0\) at apex: \(y_{\max} = y_0 + rac{v_{0y}^2}{2|a_y|}\):</p>
-              <div class="calc-field-group">
-                <label>Calculated Max Height \(y_{\max,	ext{calc}}\) (m):</label>
-                <input type="number" id="inpCalcMaxHeight" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-            </div>
-            <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Max Height:</strong> Direct maximum \(y\) value recorded in the tracking data table:</p>
-              <div class="calc-field-group">
-                <label>Measured Max Height \(y_{\max,	ext{meas}}\) (m):</label>
-                <input type="number" id="inpMeasMaxHeight" class="input-control" step="0.001" placeholder="0.000">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 5 & 6: Total Initial Velocity & Angle -->
-      <div class="worksheet-card">
-        <div class="worksheet-card-header">
-          <span class="worksheet-card-title">5 &amp; 6. Initial Speed &amp; Launch Angle</span>
-          <span style="font-size: 0.8rem; color: var(--muted);">Vector Decomposition</span>
-        </div>
-        <div class="worksheet-card-body">
-          <div class="calc-grid-2">
-            <div class="calc-field-group">
-              <label>5. Total Initial Speed \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\) (m/s):</label>
-              <input type="number" id="inpSpeedV0" class="input-control" step="0.001" placeholder="0.000">
-            </div>
-            <div class="calc-field-group">
-              <label>6. Launch Angle \(	heta = rctan(v_{0y} / v_{0x})\) (degrees):</label>
-              <input type="number" id="inpAngleTheta" class="input-control" step="0.01" placeholder="0.00">
-            </div>
-          </div>
-          
-          <div style="margin-top: 1rem; padding: 0.75rem; background: var(--surface-alt); border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-            <strong style="font-size: 0.82rem; color: var(--primary-teal);">7. Consistency Check:</strong>
-            <p style="font-size: 0.8rem; color: var(--muted); margin: 0.25rem 0 0 0;" id="lblConsistencyCheck">
-              Recomputed components: \(v_{0x} = v_0 \cos	heta = 0.000	ext{ m/s}\), \(v_{0y} = v_0 \sin	heta = 0.000	ext{ m/s}\). Both components agree with the best-fit curve parameters.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 8: Part 5 Real-World Reflection -->
-      <div class="worksheet-card">
-        <div class="worksheet-card-header">
-          <span class="worksheet-card-title">Part 5: Real-World Reflection</span>
-          <span class="sentence-counter-badge" id="sentenceBadge">0 / 5 Sentences</span>
-        </div>
-        <div class="worksheet-card-body">
-          <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0.5rem;">
-            Describe how you think video analysis and projectile kinematics are applied in real life (e.g. sports analytics in MLB Statcast, NBA 3-point shooting biomechanics, soccer trajectories, aerospace, or cinematography). <strong>You must write a paragraph of at least five sentences.</strong>
-          </p>
-          <textarea id="reflectionText" class="input-control" rows="6" style="width: 100%; box-sizing: border-box; line-height: 1.5;" placeholder="Write your 5+ sentence reflection here..."></textarea>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Stage 5: Presentation & Reports Stage -->
-  <section id="stepView5" class="step-view" style="padding: 1.25rem 1.5rem; max-width: 1100px; margin: 0 auto;">
-    <div class="presentation-stage">
-      <!-- Exporter Control Bar -->
-      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
-        <div>
-          <h2 style="font-size: 1.2rem; font-weight: 700; color: var(--primary-teal); margin: 0;">Presentation &amp; Deliverables</h2>
-          <p style="font-size: 0.82rem; color: var(--muted); margin: 0.2rem 0 0 0;">Export your complete 8-slide presentation deck matching the classroom rubric, print your worksheet, and copy form responses.</p>
-        </div>
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-          <button id="btnDownloadPptx" class="btn btn-amber" style="font-weight: 700;">
-            📥 Download Presentation (.pptx)
-          </button>
-          <button id="btnPrintReport" class="btn">
-            🖨️ Print Lab Report / PDF
-          </button>
-          <button id="btnCopyFormData" class="btn">
-            📋 Copy Form Data
-          </button>
-        </div>
-      </div>
-
-      <!-- Slide Deck Previewer -->
-      <div class="slide-deck-preview">
-        <!-- Slide Header Controls -->
-        <div style="padding: 0.6rem 1rem; background: var(--surface-alt); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 600; font-size: 0.85rem; color: var(--primary-teal);" id="slidePreviewTitle">Slide 1 of 8: Title &amp; Honor Code</span>
-          <div style="display: flex; gap: 0.35rem;">
-            <button id="btnPrevSlide" class="btn btn-icon-only" style="padding: 0.25rem 0.5rem;">‹</button>
-            <button id="btnNextSlide" class="btn btn-icon-only" style="padding: 0.25rem 0.5rem;">›</button>
-          </div>
-        </div>
-
-        <!-- Slide Viewport (16:9 Aspect Ratio) -->
-        <div class="slide-viewport" id="slideViewport">
-          <!-- Dynamic Slide Content rendered via JavaScript -->
-        </div>
-
-        <!-- Slide Thumbnail Strip -->
-        <div class="slide-thumb-strip" id="slideThumbStrip">
-          <div class="slide-thumb active" data-slide-idx="1">Slide 1<br><small>Title</small></div>
-          <div class="slide-thumb" data-slide-idx="2">Slide 2<br><small>y(t)</small></div>
-          <div class="slide-thumb" data-slide-idx="3">Slide 3<br><small>vy(t)</small></div>
-          <div class="slide-thumb" data-slide-idx="4">Slide 4<br><small>ay(t)</small></div>
-          <div class="slide-thumb" data-slide-idx="5">Slide 5<br><small>x(t)</small></div>
-          <div class="slide-thumb" data-slide-idx="6">Slide 6<br><small>vx(t)</small></div>
-          <div class="slide-thumb" data-slide-idx="7">Slide 7<br><small>ax(t)</small></div>
-          <div class="slide-thumb" data-slide-idx="8">Slide 8<br><small>Reflection</small></div>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- Status Bar Footer -->
   <footer class="status-bar">
