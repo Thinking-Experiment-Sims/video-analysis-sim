@@ -619,3 +619,437 @@ body {
   font-size: 0.8rem;
   color: var(--muted);
 }
+
+
+/* ========================================================================== */
+/* Project Stepper & Lab Workflow Modes                                       */
+/* ========================================================================== */
+
+.project-stepper-wrap {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  overflow-x: auto;
+}
+
+.project-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.step-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-light);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.step-btn:hover {
+  background: var(--primary-teal-light);
+  color: var(--primary-teal-dark);
+  border-color: var(--primary-teal-border);
+}
+
+.step-btn.active {
+  background: var(--primary-teal);
+  color: #ffffff;
+  border-color: var(--primary-teal);
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(15, 126, 155, 0.25);
+}
+
+.step-btn.completed {
+  background: var(--accent-amber-light);
+  color: var(--accent-amber-dark);
+  border-color: var(--accent-amber-border);
+}
+
+.step-btn .step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.step-btn.active .step-num {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.student-meta-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+}
+
+.student-meta-bar label {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ========================================================================== */
+/* View Containers (Steps 1-5)                                                */
+/* ========================================================================== */
+
+.step-view {
+  display: none;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.step-view.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 6-Graph Studio Sub-Nav */
+.graph-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+}
+
+.graph-nav-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.graph-nav-btn:hover {
+  border-color: var(--primary-teal);
+  color: var(--primary-teal);
+}
+
+.graph-nav-btn.active {
+  background: var(--primary-teal);
+  color: #ffffff;
+  border-color: var(--primary-teal);
+  font-weight: 600;
+}
+
+/* Equation Badges */
+.equation-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--primary-teal);
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.6rem;
+}
+
+.equation-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--subtle);
+  letter-spacing: 0.04em;
+}
+
+.equation-formula {
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+/* Tangent Tool Studio Bar */
+.tangent-studio-bar {
+  background: var(--accent-amber-light);
+  border: 1px solid var(--accent-amber-border);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.tangent-stats-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tangent-pill {
+  background: #ffffff;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--accent-amber-border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-amber-dark);
+}
+
+/* 6-Grid Overview */
+.six-graph-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .six-graph-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grid-graph-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  height: 320px;
+}
+
+.grid-graph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.grid-graph-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--primary-teal);
+}
+
+/* ========================================================================== */
+/* Guided Calculations Workspace (Step 4)                                     */
+/* ========================================================================== */
+
+.workspace-container {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+.worksheet-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.worksheet-card-header {
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.worksheet-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary-teal);
+}
+
+.worksheet-card-body {
+  padding: 1.25rem;
+}
+
+.calc-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .calc-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calc-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.calc-field-group label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pct-diff-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #e6f8ea;
+  color: #1a7f37;
+  border: 1px solid #b4e6be;
+}
+
+.pct-diff-badge.warn {
+  background: #fff8e6;
+  color: #b06210;
+  border: 1px solid #fedb99;
+}
+
+.sentence-counter-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--accent-amber-light);
+  color: var(--accent-amber-dark);
+  border: 1px solid var(--accent-amber-border);
+}
+
+.sentence-counter-badge.complete {
+  background: #e6f8ea;
+  color: #1a7f37;
+  border-color: #b4e6be;
+}
+
+/* ========================================================================== */
+/* Presentation Preview & Exporter (Step 5)                                  */
+/* ========================================================================== */
+
+.presentation-stage {
+  max-width: 1040px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.slide-deck-preview {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(18, 49, 64, 0.08);
+  overflow: hidden;
+}
+
+.slide-viewport {
+  aspect-ratio: 16 / 9;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem 3rem;
+  box-sizing: border-box;
+}
+
+.slide-thumb-strip {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  background: var(--surface-alt);
+  overflow-x: auto;
+}
+
+.slide-thumb {
+  flex: 0 0 110px;
+  aspect-ratio: 16 / 9;
+  background: #ffffff;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  transition: all 0.15s ease;
+}
+
+.slide-thumb:hover {
+  border-color: var(--primary-teal);
+  color: var(--primary-teal);
+}
+
+.slide-thumb.active {
+  border-color: var(--accent-amber);
+  color: var(--accent-amber-dark);
+  background: var(--accent-amber-light);
+  box-shadow: 0 2px 6px rgba(214, 123, 25, 0.2);
+}
+
+/* ========================================================================== */
+/* Print Styling for PDF / Paper Lab Submission                               */
+/* ========================================================================== */
+
+@media print {
+  .app-header, .project-stepper-wrap, .toolbar, .secondary-toolbar,
+  .transport-bar, .status-bar, .graph-subnav, .tangent-studio-bar,
+  .btn, .pill-btn, .slide-thumb-strip {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .step-view {
+    display: block !important;
+  }
+
+  .app-container {
+    display: block !important;
+    padding: 0 !important;
+  }
+
+  .card, .worksheet-card, .slide-deck-preview {
+    border: none !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+}
